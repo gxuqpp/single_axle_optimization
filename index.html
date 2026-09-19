@@ -1,0 +1,2435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>汽车单级主减速器优化设计</title>
+<style>
+/* ══════════════════════════════════════════
+   源代码保护 · 禁止选中
+   ══════════════════════════════════════════ */
+html, body {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+input, textarea, select, .log-box, [contenteditable] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+}
+/* ══════════════════════════════════════════
+   深色高对比主题 · 大字号 · 手机适配
+   ══════════════════════════════════════════ */
+:root {
+  --ink:    #f0eee8;
+  --paper:  #1a1c26;
+  --accent: #ff7043;
+  --accent2:#56b4ff;
+  --grid:   #363a52;
+  --card:   #22253a;
+  --border: #404468;
+  --ok:     #4ddc82;
+  --warn:   #ffc645;
+  --err:    #ff6b6b;
+  --mono:   'Courier New', Courier, monospace;
+  --label-color: #b8bce0;
+  --hint-color:  #7880aa;
+  --input-bg:    #0f111a;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "楷体","KaiTi","STKaiti","PingFang SC","Microsoft YaHei",Georgia,serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.hdr {
+  background: #0d0f1a;
+  color: var(--ink);
+  display: grid;
+  grid-template-columns: 7px 1fr;
+  position: sticky; top: 0; z-index: 100;
+}
+.hdr-accent { background: var(--accent); }
+.hdr-inner {
+  padding: 14px 20px 12px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.hdr h1 {
+  font-size: 22px; font-weight: 700;
+  font-family: "微软雅黑","Microsoft YaHei","PingFang SC",sans-serif;
+  letter-spacing: 0.03em; color: #fff;
+}
+.hdr .sub {
+  font-size: 13px; color: #8890bb;
+  font-family: var(--mono); margin-top: 3px;
+}
+.hdr .badge {
+  margin-left: auto;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px; font-family: var(--mono);
+  padding: 4px 12px; border-radius: 3px;
+  letter-spacing: 0.08em; white-space: nowrap;
+}
+
+/* ── Layout ── */
+.layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  min-height: calc(100vh - 60px);
+}
+.sidebar {
+  border-right: 2px solid var(--border);
+  background: var(--card);
+  padding: 16px 14px;
+  overflow-y: auto;
+}
+.main { padding: 16px; overflow-y: auto; background: var(--paper); }
+
+/* ── Panels ── */
+.panel {
+  border: 1.5px solid var(--border);
+  border-radius: 5px;
+  margin-bottom: 14px;
+  background: var(--card);
+  overflow: hidden;
+}
+.panel-hdr {
+  background: #0d0f1a;
+  color: #e0e4ff;
+  padding: 9px 14px;
+  font-size: 15px;
+  font-family: var(--mono);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  display: flex; align-items: center; gap: 8px;
+}
+.panel-hdr .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+}
+.panel-body { padding: 14px 12px; }
+
+/* ── Fields ── */
+.field { margin-bottom: 12px; }
+.field label {
+  display: block;
+  font-size: 15px;
+  color: var(--label-color);
+  margin-bottom: 5px;
+  font-family: var(--mono);
+  font-weight: 600;
+}
+.field label em { color: var(--accent); font-style: normal; font-weight: 700; }
+.field input[type=number], .field select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  font-size: 17px;
+  font-family: var(--mono);
+  background: var(--input-bg);
+  color: var(--ink);
+  transition: border-color 0.15s;
+  -webkit-appearance: none;
+}
+.field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%23b8bce0'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+.field input:focus, .field select:focus {
+  outline: none;
+  border-color: var(--accent2);
+  background: #161926;
+}
+.field .hint {
+  font-size: 13px; color: var(--hint-color);
+  margin-top: 4px; font-family: var(--mono);
+}
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ── Buttons ── */
+.btn {
+  padding: 13px 18px; border: none; border-radius: 4px;
+  font-size: 17px; font-family: var(--mono);
+  font-weight: 700; cursor: pointer;
+  letter-spacing: 0.04em; transition: all 0.15s;
+  touch-action: manipulation;
+}
+.btn-run {
+  background: var(--accent); color: #fff; width: 100%;
+  margin-top: 10px; padding: 15px;
+  font-size: 18px;
+}
+.btn-run:hover, .btn-run:active { background: #e05030; }
+.btn-run:disabled { background: #555; color: #999; cursor: not-allowed; }
+.btn-sec {
+  background: #2c3050; color: #d0d4f0;
+  border: 1.5px solid var(--border);
+  margin-top: 8px; width: 100%;
+}
+.btn-sec:hover, .btn-sec:active { background: #363a60; }
+
+/* ── Results ── */
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px; margin-bottom: 16px;
+}
+.res-card {
+  border: 1.5px solid var(--border);
+  border-radius: 5px;
+  padding: 12px 14px;
+  background: #1c1f30;
+}
+.res-card .rc-label {
+  font-size: 13px; color: var(--label-color);
+  font-family: var(--mono); margin-bottom: 5px;
+  line-height: 1.4;
+}
+.res-card .rc-val {
+  font-size: 24px; font-weight: 700;
+  font-family: var(--mono); color: var(--accent);
+}
+.res-card .rc-unit { font-size: 13px; color: var(--hint-color); }
+.res-card .rc-delta {
+  font-size: 13px; font-family: var(--mono); margin-top: 4px;
+}
+.res-card .rc-delta.up { color: var(--err); }
+.res-card .rc-delta.dn { color: var(--ok); }
+
+/* ── Constraint table ── */
+.ct { width: 100%; border-collapse: collapse; font-size: 14px; font-family: var(--mono); min-width: 700px; }
+.ct th {
+  background: #0d0f1a; color: #c0c8f0;
+  padding: 9px 10px; text-align: left; font-weight: 700;
+  font-size: 14px;
+}
+.ct td { padding: 8px 10px; border-bottom: 1px solid var(--grid); color: var(--ink); }
+.ct tr:hover td { background: #2a2e45; }
+.badge-ok  { background: #1a4030; color: var(--ok);   padding: 2px 9px; border-radius: 10px; font-size: 13px; font-weight: 700; }
+.badge-vio { background: #3a1a1a; color: var(--err);  padding: 2px 9px; border-radius: 10px; font-size: 13px; font-weight: 700; }
+.badge-warn{ background: #3a2e0a; color: var(--warn); padding: 2px 9px; border-radius: 10px; font-size: 13px; font-weight: 700; }
+
+/* ── Canvas ── */
+.chart-wrap {
+  border: 1.5px solid var(--border);
+  border-radius: 5px;
+  background: var(--card);
+  padding: 14px;
+  margin-bottom: 14px;
+}
+.chart-title {
+  font-family: var(--mono); font-size: 14px;
+  color: var(--label-color); margin-bottom: 10px;
+  letter-spacing: 0.03em;
+}
+canvas { display: block; width: 100%; }
+
+/* ── Log ── */
+.log-box {
+  border: 1.5px solid var(--border);
+  background: #080a12;
+  color: #4ddc82;
+  font-family: var(--mono);
+  font-size: 14px;
+  padding: 12px;
+  border-radius: 4px;
+  height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+.log-box .log-err  { color: var(--err); }
+.log-box .log-warn { color: var(--warn); }
+.log-box .log-info { color: var(--accent2); }
+
+/* ── Progress ── */
+.progress-wrap { margin: 10px 0; }
+.progress-bar {
+  height: 8px; background: var(--grid); border-radius: 4px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; background: var(--accent);
+  border-radius: 4px; width: 0%; transition: width 0.3s;
+}
+.progress-label {
+  font-size: 14px; color: var(--label-color);
+  font-family: var(--mono); margin-top: 5px;
+}
+
+/* ── Divider ── */
+.divider { border: none; border-top: 1px solid var(--grid); margin: 14px 0; }
+
+/* ── Obj Summary ── */
+.obj-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+  border: 2px solid var(--border);
+  border-radius: 5px;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+.obj-col { padding: 12px 14px; border-right: 1.5px solid var(--border); }
+.obj-col:last-child { border-right: none; }
+.obj-col .oc-head {
+  font-size: 12px; color: var(--hint-color);
+  letter-spacing: 0.07em; text-transform: uppercase;
+  margin-bottom: 8px; font-weight: 700;
+}
+.obj-col .oc-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 5px 0; border-bottom: 1px solid var(--grid); gap: 8px;
+}
+.obj-col .oc-row:last-child { border-bottom: none; }
+.obj-col .oc-label { color: var(--hint-color); flex-shrink: 0; }
+.obj-col .oc-val   { font-weight: 700; color: var(--ink); }
+.obj-col.oc-before { background: #1e2030; }
+.obj-col.oc-after  { background: #1a2820; }
+.obj-col.oc-delta  { background: #221e2a; }
+.improved { color: var(--ok); }
+.worsened { color: var(--err); }
+.neutral  { color: var(--ink); }
+
+/* ── Section title ── */
+.section-title {
+  font-size: 14px; font-family: var(--mono);
+  color: var(--accent); letter-spacing: 0.07em;
+  margin-bottom: 10px; margin-top: 4px;
+  text-transform: uppercase; font-weight: 700;
+}
+
+/* ── Hint box ── */
+#hintBox {
+  padding: 60px 20px; text-align: center;
+  color: var(--hint-color);
+  font-family: var(--mono); font-size: 16px;
+  line-height: 2;
+}
+
+/* ════════════════════════════════════════
+   手机端响应式 (≤ 700px)
+   ════════════════════════════════════════ */
+@media (max-width: 700px) {
+  body { font-size: 16px; }
+  .hdr h1 { font-size: 18px; }
+  .hdr .sub { font-size: 12px; }
+  .hdr .badge { display: none; }
+  .hdr-inner { padding: 10px 14px 8px; gap: 8px; }
+  .layout { grid-template-columns: 1fr; grid-template-rows: auto auto; }
+  .sidebar { border-right: none; border-bottom: 2px solid var(--border); padding: 12px 10px; overflow-y: visible; }
+  .main { padding: 12px 10px; }
+  .grid2 { grid-template-columns: 1fr; }
+  .obj-summary { grid-template-columns: 1fr; }
+  .obj-col { border-right: none; border-bottom: 1.5px solid var(--border); }
+  .obj-col:last-child { border-bottom: none; }
+  .panel-body { overflow-x: auto; }
+  .ct { min-width: 860px; }
+  .result-grid { grid-template-columns: 1fr 1fr; }
+  .btn { font-size: 16px; padding: 13px; }
+  .btn-run { font-size: 17px; padding: 14px; }
+  .field input[type=number], .field select { font-size: 16px; padding: 10px; }
+  .field label { font-size: 14px; }
+  .field .hint { font-size: 12px; }
+  .panel-hdr { font-size: 14px; padding: 8px 12px; }
+  .log-box { font-size: 13px; height: 180px; }
+  .section-title { font-size: 13px; }
+}
+@media (max-width: 400px) {
+  .result-grid { grid-template-columns: 1fr; }
+  .hdr h1 { font-size: 16px; }
+  .res-card .rc-val { font-size: 20px; }
+}
+
+/* ══════════════════════════════════════
+   登录 / 教师 / 评分 样式
+   ══════════════════════════════════════ */
+.login-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.88);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+.login-box {
+  background: #1e2138;
+  border: 2px solid var(--border);
+  padding: 36px 32px;
+  border-radius: 10px;
+  max-width: 460px; width: 92%;
+  box-shadow: 0 16px 64px rgba(0,0,0,0.7);
+}
+.login-box h2 {
+  font-size: 22px; font-weight: 700;
+  font-family: "微软雅黑","Microsoft YaHei",sans-serif;
+  color: var(--accent); margin-bottom: 8px;
+}
+.login-box .desc {
+  font-size: 13px; color: var(--hint-color);
+  margin-bottom: 24px; line-height: 1.7;
+}
+.login-field { margin-bottom: 18px; }
+.login-field label {
+  display: block; margin-bottom: 6px;
+  font-size: 13px; color: var(--label-color);
+  font-family: var(--mono); font-weight: 600;
+}
+.login-field input {
+  width: 100%; padding: 11px 14px;
+  border: 2px solid var(--border); border-radius: 5px;
+  font-size: 15px; font-family: var(--mono);
+  background: var(--input-bg); color: var(--ink);
+  transition: border-color 0.2s;
+}
+.login-field input:focus { outline: none; border-color: var(--accent2); }
+.login-field .hint { font-size: 12px; color: var(--hint-color); margin-top: 4px; }
+.login-field .err-msg {
+  font-size: 12px; color: var(--err); margin-top: 4px; display: none;
+}
+.login-btn {
+  width: 100%; padding: 13px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 5px;
+  font-size: 16px; font-family: var(--mono); font-weight: 700;
+  cursor: pointer; transition: background 0.15s; margin-top: 4px;
+}
+.login-btn:hover { background: #e05030; }
+.login-btn.secondary {
+  background: #2c3050; border: 1.5px solid var(--border);
+  margin-top: 8px; font-size: 14px;
+}
+.login-btn.secondary:hover { background: #363a60; }
+
+.stu-badge {
+  background: rgba(255,112,67,0.15);
+  border: 1px solid rgba(255,112,67,0.4);
+  padding: 6px 16px; border-radius: 4px;
+  font-size: 13px; font-family: var(--mono); color: var(--ink);
+  white-space: nowrap;
+}
+.stu-badge .sb-label { font-size: 11px; color: var(--hint-color); }
+.stu-badge .sb-val { font-weight: 700; color: var(--accent); margin-top: 2px; }
+.teacher-hdr-btn {
+  background: rgba(86,180,255,0.15);
+  border: 1px solid rgba(86,180,255,0.4);
+  padding: 8px 16px; border-radius: 4px;
+  font-size: 13px; font-family: var(--mono); color: #a0d8ff;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.teacher-hdr-btn:hover { background: rgba(86,180,255,0.28); color: #fff; }
+
+/* ══ 智能评分报告面板 ══ */
+.score-hero {
+  background: linear-gradient(135deg, #1a2060 0%, #0d1a3a 60%, #1a0d2e 100%);
+  border: 2px solid #4060a0; border-radius: 8px;
+  padding: 24px; text-align: center; margin-bottom: 16px;
+}
+.score-hero .sh-label { font-size: 13px; color: #8890bb; margin-bottom: 12px; font-family: var(--mono); display: block; }
+.score-hero .sh-total { font-size: 72px; font-weight: 700; color: #7ecfff; font-family: var(--mono); line-height: 1; display: block; }
+.score-hero .sh-grade { font-size: 26px; font-weight: 700; margin-top: 8px; display: block; }
+.score-dims {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px; margin-top: 18px;
+}
+.sd-item {
+  background: rgba(255,255,255,0.1); border-radius: 6px;
+  padding: 10px 8px; text-align: center;
+}
+.sd-item .sd-lbl { font-size: 11px; color: #8890bb; font-family: var(--mono); line-height: 1.4; display: block; }
+.sd-item .sd-val { font-size: 18px; font-weight: 700; color: #7ecfff; margin-top: 4px; font-family: var(--mono); display: block; }
+.score-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 13px; font-family: var(--mono);
+  margin-top: 8px; table-layout: fixed;
+}
+.score-table th {
+  background: #0d0f1a; color: #c0c8f0;
+  padding: 9px 10px; border: 1px solid var(--grid);
+  font-weight: 700; text-align: left;
+  white-space: nowrap;
+}
+.score-table td {
+  padding: 8px 10px; border: 1px solid var(--grid);
+  color: var(--ink); vertical-align: top;
+  word-break: break-word;
+}
+.score-table tr:hover td { background: #2a2e45; }
+.score-table th:nth-child(1), .score-table td:nth-child(1) { width: 22%; }
+.score-table th:nth-child(2), .score-table td:nth-child(2) { width: 24%; font-size: 12px; color: var(--hint-color); }
+.score-table th:nth-child(3), .score-table td:nth-child(3) { width: 30%; }
+.score-table th:nth-child(4), .score-table td:nth-child(4) { width: 10%; text-align: center; }
+.score-table th:nth-child(5), .score-table td:nth-child(5) { width: 14%; text-align: center; }
+.advice-box {
+  background: #0d1520; border-left: 3px solid var(--accent2);
+  padding: 12px 16px; border-radius: 0 5px 5px 0;
+  font-size: 13px; color: #b0c8e0;
+  line-height: 2.2; font-family: var(--mono);
+  margin: 8px 0;
+}
+
+/* ── 教师统计面板 ── */
+.teacher-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.88);
+  display: flex; align-items: flex-start; justify-content: center;
+  z-index: 9998; padding: 20px; overflow-y: auto;
+}
+.teacher-panel {
+  background: #1a1c26;
+  border: 2px solid var(--border);
+  border-radius: 10px; max-width: 1060px; width: 100%;
+  padding: 28px; margin: auto;
+  box-shadow: 0 16px 60px rgba(0,0,0,0.7);
+}
+.teacher-panel h2 { font-size: 22px; font-weight: 700; color: var(--accent2); margin-bottom: 4px; }
+.teacher-panel .tp-sub { font-size: 13px; color: var(--hint-color); margin-bottom: 20px; }
+.tp-card {
+  background: #22253a; border: 1.5px solid var(--border);
+  border-radius: 7px; padding: 16px; margin-bottom: 14px;
+}
+.tp-card-title {
+  font-size: 14px; font-family: var(--mono); font-weight: 700;
+  color: var(--accent); margin-bottom: 10px;
+  border-bottom: 1px solid var(--grid); padding-bottom: 6px;
+}
+.tp-upload-zone {
+  border: 2px dashed var(--border); border-radius: 7px;
+  padding: 30px 20px; text-align: center; cursor: pointer;
+  transition: all 0.3s; background: #1a1c26;
+}
+.tp-upload-zone:hover { border-color: var(--accent2); background: #1e2238; }
+.tp-upload-zone.dragover { border-color: var(--accent); background: #2a1a1a; }
+.tp-upload-zone .uiz { font-size: 36px; margin-bottom: 8px; }
+.tp-upload-zone .uit { font-size: 14px; color: var(--label-color); }
+.tp-upload-zone .uih { font-size: 12px; color: var(--hint-color); margin-top: 6px; }
+.tp-info-box {
+  background: #1e2a1e; border: 1px solid #2a4a2a;
+  border-radius: 5px; padding: 10px 14px; font-size: 12px;
+  color: #8bc88b; margin-bottom: 12px; line-height: 1.7;
+}
+.tp-stats-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px; margin: 12px 0;
+}
+.tp-stat-item {
+  background: rgba(86,180,255,0.08);
+  border: 1px solid rgba(86,180,255,0.2);
+  border-radius: 6px; padding: 14px; text-align: center;
+}
+.tp-stat-item .tsi-label { font-size: 12px; color: var(--hint-color); }
+.tp-stat-item .tsi-val { font-size: 28px; font-weight: 700; font-family: var(--mono); color: var(--accent2); margin-top: 4px; }
+.stu-list-item {
+  background: #1c1f30; border: 1.5px solid var(--border);
+  border-radius: 5px; padding: 12px; margin-bottom: 8px;
+  cursor: pointer; transition: all 0.15s;
+}
+.stu-list-item:hover { border-color: var(--accent2); background: #22253a; }
+.stu-list-item .sli-hdr { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.stu-list-item .sli-name { font-size: 15px; font-weight: 700; color: var(--accent2); font-family: var(--mono); }
+.stu-list-item .sli-score { font-size: 14px; font-family: var(--mono); }
+.stu-list-item .sli-detail { font-size: 12px; color: var(--hint-color); margin-top: 4px; }
+.stu-sub-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: var(--mono); margin-top: 10px; }
+.stu-sub-table th { background: #0d0f1a; color: #c0c8f0; padding: 6px 8px; border: 1px solid var(--border); }
+.stu-sub-table td { padding: 5px 8px; border: 1px solid var(--grid); color: var(--ink); }
+
+@media (max-width: 700px) {
+  .teacher-panel { padding: 16px; }
+  .score-sub-grid { grid-template-columns: 1fr 1fr; }
+  .tp-stats-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body oncontextmenu="return false" onselectstart="return false" ondragstart="return false">
+
+<!-- ══ 学生登录遮罩 ══ -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h2>⚙️ 汽车单级主减速器优化设计工具</h2>
+    <div class="desc">
+      欢迎！本工具基于序列二次规划法（SQP）进行3变量（模数 m、齿数 z₁、齿宽系数 φd）单级主减速器体积最小化优化。<br>
+      请先输入您的学号和姓名，完成后系统将生成智能评分报告。
+    </div>
+    <div class="login-field">
+      <label>学号（10位数字）</label>
+      <input type="text" id="li_studentId" placeholder="请输入10位数字学号" maxlength="10"
+             oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      <div class="hint">示例：2024012345</div>
+      <div class="err-msg" id="li_idErr">请输入准确的10位数字学号</div>
+    </div>
+    <div class="login-field">
+      <label>姓名</label>
+      <input type="text" id="li_studentName" placeholder="请输入您的真实姓名">
+      <div class="hint">用于报告和教师管理系统</div>
+      <div class="err-msg" id="li_nameErr">姓名至少需要2个字符</div>
+    </div>
+    <button class="login-btn" onclick="submitLogin()">✅ 进入设计系统</button>
+  </div>
+</div>
+
+<!-- ══ 教师登录遮罩 ══ -->
+<div class="login-overlay" id="teacherLoginOverlay" style="display:none">
+  <div class="login-box">
+    <h2>🔐 教师管理系统</h2>
+    <div class="desc">请输入教师密码以访问统计管理功能</div>
+    <div class="login-field">
+      <label>教师密码</label>
+      <input type="password" id="li_teacherPwd" placeholder="请输入密码"
+             onkeydown="if(event.key==='Enter')submitTeacherLogin()">
+      <div class="hint"></div>
+      <div class="err-msg" id="li_pwdErr">密码错误，请重试</div>
+    </div>
+    <button class="login-btn" onclick="submitTeacherLogin()">登录</button>
+    <button class="login-btn secondary" onclick="closeTeacherLogin()">取消</button>
+  </div>
+</div>
+
+<div class="hdr">
+  <div class="hdr-accent"></div>
+  <div class="hdr-inner">
+    <div>
+      <h1>汽车单级主减速器优化设计工具·广西大学 ·车辆工程专业 ·《汽车设计》课程教学团队</h1>
+      <div class="sub">基于序列二次规划法（SQP）· 3变量 · 3非线性强度约束 · 体积最小化 · 实验版</div>
+    </div>
+    <div class="badge">OFFLINE · SQP · v1.0</div>
+    <div class="stu-badge" id="stuBadge" style="display:none">
+      <div class="sb-label">当前学生</div>
+      <div class="sb-val"><span id="dispName">--</span> &nbsp;(<span id="dispId">--</span>)</div>
+    </div>
+    <div class="teacher-hdr-btn" onclick="openTeacherLogin()">👨‍🏫 教师管理</div>
+  </div>
+</div>
+
+<div class="layout">
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<aside class="sidebar">
+
+  <!-- Fixed Params -->
+  <div class="panel">
+    <div class="panel-hdr"><span class="dot"></span>固定设计参数（已知条件）</div>
+    <div class="panel-body">
+      <div class="grid2">
+        <div class="field">
+          <label><em>T₁</em> 输入转矩 (N·mm)</label>
+          <input type="number" id="p_te" value="150000" step="1000">
+        </div>
+        <div class="field">
+          <label><em>i₀</em> 主减速比</label>
+          <input type="number" id="p_i0" value="3.2" step="0.1">
+        </div>
+        <div class="field">
+          <label><em>[σH]₁</em> 小齿轮许用接触应力 (MPa)</label>
+          <input type="number" id="p_sh1" value="650">
+        </div>
+        <div class="field">
+          <label><em>[σF]₁</em> 小齿轮许用弯曲应力 (MPa)</label>
+          <input type="number" id="p_sf1" value="290">
+        </div>
+        <div class="field">
+          <label><em>[σH]₂</em> 大齿轮许用接触应力 (MPa)</label>
+          <input type="number" id="p_sh2" value="550">
+        </div>
+        <div class="field">
+          <label><em>[σF]₂</em> 大齿轮许用弯曲应力 (MPa)</label>
+          <input type="number" id="p_sf2" value="210">
+        </div>
+        <div class="field">
+          <label><em>ZH</em> 节点区域系数</label>
+          <input type="number" id="p_zh" value="2.5" step="0.01">
+        </div>
+        <div class="field">
+          <label><em>ZE</em> 弹性影响系数 (√MPa)</label>
+          <input type="number" id="p_ze" value="189.8" step="0.1">
+        </div>
+        <div class="field">
+          <label><em>K</em> 载荷系数</label>
+          <input type="number" id="p_k" value="1.48" step="0.01">
+        </div>
+      </div>
+      <div class="hint" style="font-size:12px;color:var(--hint-color);font-family:var(--mono)">
+        默认值与 MATLAB 程序 main_axle_single_1.m 一致
+      </div>
+    </div>
+  </div>
+
+  <!-- Design Variables x0 -->
+  <div class="panel">
+    <div class="panel-hdr"><span class="dot"></span>设计变量初值 x₀</div>
+    <div class="panel-body">
+      <div class="section-title">▸ 直接输入任意数值</div>
+      <div class="field">
+        <label><em>m</em> 齿轮模数 (mm)</label>
+        <input type="number" id="x_m" value="2.5" step="0.25">
+        <div class="hint">设计区间 2 ~ 10 mm · 标准系列：2, 2.5, 3, 3.5, 4, 5, 6, 8, 10</div>
+      </div>
+      <div class="field">
+        <label><em>z₁</em> 小齿轮齿数</label>
+        <input type="number" id="x_z1" value="32" step="1">
+        <div class="hint">设计区间 17 ~ 35 · z₁ ≥ 17 避免根切</div>
+      </div>
+      <div class="field">
+        <label><em>φd</em> 齿宽系数 (b/d₁)</label>
+        <input type="number" id="x_faid" value="0.9" step="0.05">
+        <div class="hint">设计区间 0.8 ~ 1.4</div>
+      </div>
+
+      <hr class="divider">
+      <div class="section-title">▸ 优化算法设置</div>
+      <div class="field">
+        <label>优化算法</label>
+        <select id="p_algo">
+          <option value="de_sqp" selected>DE + SQP 精调（推荐，全局最优）</option>
+          <option value="de">差分进化 DE（纯全局搜索）</option>
+          <option value="multistart">多起点 SQP（10组随机初值）</option>
+          <option value="pso">粒子群优化 PSO + SQP</option>
+          <option value="sqp">原始梯度下降（对比用）</option>
+        </select>
+        <div class="hint" id="algoHint">DE全局搜索 + SQP精调，能有效逃离局部最优</div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>种群大小 / 起点数</label>
+          <input type="number" id="p_popSize" value="100" min="20" max="300">
+        </div>
+        <div class="field">
+          <label>最大代数 / 迭代数</label>
+          <input type="number" id="p_maxIter" value="1000" min="50" max="5000">
+        </div>
+        <div class="field">
+          <label>DE 变异因子 F</label>
+          <input type="number" id="p_deF" value="0.8" step="0.05" min="0.3" max="1.2">
+        </div>
+        <div class="field">
+          <label>DE 交叉概率 CR</label>
+          <input type="number" id="p_deCR" value="0.9" step="0.05" min="0.1" max="1.0">
+        </div>
+        <div class="field">
+          <label>收敛精度 ε</label>
+          <input type="number" id="p_tol" value="1e-6">
+        </div>
+      </div>
+      <div class="field">
+        <label>优化目标</label>
+        <select id="p_objMode">
+          <option value="vol" selected>减速器体积最小 V = (π/4)(1+i₀²)m³z₁³φd（MATLAB原版）</option>
+        </select>
+        <div class="hint">目标函数与 objfun_axle_single_1.m 完全一致</div>
+      </div>
+
+      <button class="btn btn-run" id="btnRun" onclick="runOptimize()">▶ 开始优化计算</button>
+      <button class="btn btn-sec" onclick="resetToDefault()">↺ 恢复默认初值</button>
+      <button class="btn btn-sec" onclick="evalCurrent()">⚡ 仅评估当前参数</button>
+    </div>
+  </div>
+
+</aside>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<main class="main">
+
+  <!-- Progress -->
+  <div class="panel" id="progressPanel" style="display:none">
+    <div class="panel-hdr"><span class="dot"></span>优化进度</div>
+    <div class="panel-body">
+      <div class="progress-wrap">
+        <div class="progress-bar"><div class="progress-fill" id="pFill"></div></div>
+        <div class="progress-label" id="pLabel">正在计算…</div>
+      </div>
+      <div class="log-box" id="logBox"></div>
+    </div>
+  </div>
+
+  <!-- Objective comparison -->
+  <div class="panel" id="objPanel" style="display:none">
+    <div class="panel-hdr"><span class="dot"></span>目标函数与强度指标对比</div>
+    <div class="panel-body">
+      <div id="objSummary" style="margin-bottom:14px"></div>
+      <div class="result-grid" id="objCards"></div>
+    </div>
+  </div>
+
+  <!-- Variables comparison -->
+  <div class="panel" id="varPanel" style="display:none">
+    <div class="panel-hdr"><span class="dot"></span>设计变量 — 优化前 vs 优化后 vs 工程圆整</div>
+    <div class="panel-body" style="overflow-x:auto">
+      <table class="ct" id="varTable">
+        <thead><tr>
+          <th>变量</th><th>含义</th><th>优化前</th><th>优化后</th>
+          <th>变化量</th><th>下界</th><th>上界</th><th>状态</th>
+          <th>工程圆整值 <span style="color:var(--accent);font-size:11px">（可修改）</span></th>
+        </tr></thead>
+        <tbody id="varBody"></tbody>
+      </table>
+      <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-sec" style="width:auto;padding:9px 18px;font-size:14px" onclick="autoRound()">⚙ 自动标准圆整（m取标准系列·z₁取整数·φd取0.05倍数）</button>
+        <span id="rndVolInfo" style="align-self:center;font-family:var(--mono);font-size:13px;color:var(--label-color)"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Constraints -->
+  <div class="panel" id="conPanel" style="display:none">
+    <div class="panel-hdr"><span class="dot"></span>约束条件校核</div>
+    <div class="panel-body" style="overflow-x:auto">
+      <table class="ct" id="conTable">
+        <thead><tr>
+          <th>#</th><th>约束条件</th><th>类型</th>
+          <th>优化前值</th><th>优化后值</th><th>限值</th><th>结论</th>
+          <th>圆整后约束值</th><th>圆整后结论</th>
+        </tr></thead>
+        <tbody id="conBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-wrap" id="chartWrap" style="display:none">
+    <div class="chart-title">减速器体积 V – 小齿轮齿数 z₁ 特性曲线（按当前 φd，不同标准模数 m）· 菱形=接触强度临界齿数 · 圆点=优化前/后方案</div>
+    <canvas id="volCanvas" height="460"></canvas>
+  </div>
+
+  <!-- Key mechanics -->
+  <div class="panel" id="mechPanel" style="display:none">
+    <div class="panel-hdr"><span class="dot"></span>齿轮副几何与强度参数计算结果</div>
+    <div class="panel-body">
+      <div class="result-grid" id="mechCards"></div>
+    </div>
+  </div>
+
+  <!-- Default hint -->
+  <div id="hintBox" style="padding:60px 0;text-align:center;color:#aaa;font-family:var(--mono);font-size:13px">
+    ← 在左侧设置参数，点击「开始优化计算」<br><br>
+    或点击「仅评估当前参数」查看初始状态下的强度校核和体积指标
+  </div>
+
+  <!-- ══ 智能评分报告面板 ══ -->
+  <div class="panel" id="scoreReportPanel" style="display:none">
+    <div class="panel-hdr"><span class="dot"></span>📊 智能评分报告</div>
+    <div class="panel-body">
+      <div id="scoreHero"></div>
+      <div id="scoreDetails" style="overflow-x:auto"></div>
+      <div style="margin-top:14px">
+        <div class="section-title">▸ 改进建议</div>
+        <div class="advice-box" id="scoreAdvice"></div>
+      </div>
+      <div style="margin-top:14px;padding:12px;background:#0d1a10;border:1px solid var(--ok);border-radius:5px;font-size:13px;color:#4ddc82;font-family:var(--mono)">
+        <strong>📦 提交说明：</strong>点击「生成评分报告文件」后下载 TXT 报告。文件包含：<br>
+        ✓ 可读的评分详情（供学生查看）&nbsp;&nbsp;✓ 机器可读的结构化数据（供教师统计）<br>
+        <strong style="color:var(--warn)">请将 TXT 文件提交给教师！</strong>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-sec" onclick="generateAxleReport()" id="btnGenReport">📥 生成评分报告文件</button>
+        <button class="btn btn-sec" onclick="reCalcScore()" style="background:#1a2a10;border-color:var(--ok);color:var(--ok)">🔄 按圆整值重新评分</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// CONSTANTS & PARAMS
+// 数学模型来源：main_axle_single_1.m / objfun_axle_single_1.m / confun_axle_single_1.m
+// 设计变量 x = [m, z1, φd]
+// ════════════════════════════════════════════════════════
+const P = {
+  te:  () => +document.getElementById('p_te').value,    // 输入转矩 N·mm
+  i0:  () => +document.getElementById('p_i0').value,    // 主减速比
+  sh1: () => +document.getElementById('p_sh1').value,   // 小齿轮许用接触应力 MPa
+  sf1: () => +document.getElementById('p_sf1').value,   // 小齿轮许用弯曲应力 MPa
+  sh2: () => +document.getElementById('p_sh2').value,   // 大齿轮许用接触应力 MPa
+  sf2: () => +document.getElementById('p_sf2').value,   // 大齿轮许用弯曲应力 MPa
+  zh:  () => +document.getElementById('p_zh').value,    // 节点区域系数
+  ze:  () => +document.getElementById('p_ze').value,    // 弹性影响系数
+  k:   () => +document.getElementById('p_k').value,     // 载荷系数
+};
+
+const LB = [2, 17, 0.8];     // 设计变量下限（与 MATLAB lb 一致）
+const UB = [10, 35, 1.4];    // 设计变量上限（与 MATLAB ub 一致）
+const X0_DEFAULT = [2.5, 32, 0.9];   // 与 MATLAB x0 一致
+const VAR_NAMES = ['m','z₁','φd'];
+const VAR_UNITS = ['mm','—','—'];
+const VAR_DESC  = ['齿轮模数','小齿轮齿数','齿宽系数 (b/d₁)'];
+const VAR_IDS   = ['m','z1','faid'];
+
+// GB/T 1357 标准模数系列（第一系列为主）
+const STD_MODULES = [2, 2.25, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9, 10];
+
+function getX0() {
+  return VAR_IDS.map(id => +document.getElementById('x_'+id).value);
+}
+function resetToDefault() {
+  VAR_IDS.forEach((id, i) => {
+    document.getElementById('x_'+id).value = X0_DEFAULT[i];
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// PHYSICS — exact translation from objfun/confun_axle_single_1.m
+// x = [m, z1, φd]  (0-indexed in JS)
+// ════════════════════════════════════════════════════════
+function gearCoefs(x) {
+  const z1 = x[1], i0 = P.i0();
+  return {
+    yf1: 12.5186/(z1 - 3.01794) + 2.063,        // 小齿轮齿形系数
+    yf2: 12.5186/(i0*z1 - 3.01794) + 2.063,     // 大齿轮齿形系数
+    ys1: 1.97 - 22.704/(z1 + 34.6),             // 小齿轮应力校正系数
+    ys2: 1.97 - 22.704/(i0*z1 + 34.6),          // 大齿轮应力校正系数
+  };
+}
+
+// 目标函数：减速器体积 mm³  —— objfun_axle_single_1.m
+function volume(x) {
+  const i0 = P.i0();
+  return 0.25 * Math.PI * (1 + i0*i0) * Math.pow(x[0],3) * Math.pow(x[1],3) * x[2];
+}
+
+// 强度应力计算 —— confun_axle_single_1.m 中的三个约束左端项
+function stresses(x) {
+  const te = P.te(), i0 = P.i0(), k = P.k(), zh = P.zh(), ze = P.ze();
+  const m = x[0], z1 = x[1], phi = x[2];
+  const cf = gearCoefs(x);
+  // 齿面接触应力（校核大齿轮）
+  const sH  = zh * ze * Math.sqrt(2*k*te*(i0+1)/i0) / Math.sqrt(phi * Math.pow(m,3) * Math.pow(z1,3));
+  // 小齿轮齿根弯曲应力
+  const sF1 = 2*k*te*cf.yf1*cf.ys1 / (Math.pow(m,3) * z1*z1 * phi);
+  // 大齿轮齿根弯曲应力
+  const sF2 = 2*k*te*cf.yf2*cf.ys2 / (Math.pow(m,3) * z1*z1 * phi);
+  return { sH, sF1, sF2, ...cf };
+}
+
+// 接触强度决定的理论最小体积（接触约束取等号时的下界）
+function theoreticalMinVol() {
+  const te = P.te(), i0 = P.i0(), k = P.k(), zh = P.zh(), ze = P.ze(), sh2 = P.sh2();
+  const cMin = Math.pow(zh*ze*Math.sqrt(2*k*te*(i0+1)/i0)/sh2, 2);  // φd·m³·z1³ 的最小允许值
+  return 0.25 * Math.PI * (1 + i0*i0) * cMin;
+}
+
+// ════════════════════════════════════════════════════════
+// CONSTRAINTS — c ≤ 0
+// ════════════════════════════════════════════════════════
+function evalConstraints(x) {
+  const m = x[0], z1 = x[1], phi = x[2];
+  const st = stresses(x);
+  const sh2 = P.sh2(), sf1 = P.sf1(), sf2 = P.sf2();
+
+  // 边界约束（设计变量上下界，作为线性行展示）
+  const lin = [
+    { label:'m ≥ 2 mm（模数下界）',     val: LB[0] - m,   lim: 0 },
+    { label:'m ≤ 10 mm（模数上界）',    val: m - UB[0],   lim: 0 },
+    { label:'z₁ ≥ 17（避免根切）',      val: LB[1] - z1,  lim: 0 },
+    { label:'z₁ ≤ 35（齿数上界）',      val: z1 - UB[1],  lim: 0 },
+    { label:'φd ≥ 0.8（齿宽系数下界）', val: LB[2] - phi, lim: 0 },
+    { label:'φd ≤ 1.4（齿宽系数上界）', val: phi - UB[2], lim: 0 },
+  ];
+
+  // 非线性强度约束 —— confun_axle_single_1.m 的三行 c
+  const nonlin = [
+    { label:'σH ≤ [σH]₂ 齿面接触疲劳强度（大齿轮）', val: st.sH  - sh2, lim: 0 },
+    { label:'σF₁ ≤ [σF]₁ 小齿轮齿根弯曲疲劳强度',     val: st.sF1 - sf1, lim: 0 },
+    { label:'σF₂ ≤ [σF]₂ 大齿轮齿根弯曲疲劳强度',     val: st.sF2 - sf2, lim: 0 },
+  ];
+
+  return { lin, nonlin, st };
+}
+
+function objective(x) { return volume(x); }
+
+// ════════════════════════════════════════════════════════
+// MATH HELPERS
+// ════════════════════════════════════════════════════════
+function gradient(f, x, eps=1e-5) {
+  return x.map((xi, i) => {
+    const xf=[...x]; xf[i]+=eps;
+    const xb=[...x]; xb[i]-=eps;
+    return (f(xf)-f(xb))/(2*eps);
+  });
+}
+function clampBounds(x) { return x.map((xi,i) => Math.max(LB[i], Math.min(UB[i], xi))); }
+function feasible(x) {
+  const cst = evalConstraints(x);
+  return [...cst.lin,...cst.nonlin].every(c => c.val <= c.lim+5e-4);
+}
+
+// ════════════════════════════════════════════════════════
+// ALGORITHM HINT
+// ════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('p_algo').addEventListener('change', function() {
+    const hints = {
+      'de_sqp':     'DE全局搜索 + SQP精调，能有效逃离局部最优（推荐）',
+      'de':         '差分进化：纯全局搜索，种群覆盖整个设计空间',
+      'multistart': '多起点SQP：从N个随机初值分别收敛，取最优',
+      'pso':        '粒子群：群体智能全局搜索，速度快',
+      'sqp':        '梯度下降惩罚函数法（原版，易陷入局部最优）',
+    };
+    document.getElementById('algoHint').textContent = hints[this.value] || '';
+  });
+});
+
+// ════════════════════════════════════════════════════════
+// CONSTRAINT PENALTY (shared by all algos)
+// ════════════════════════════════════════════════════════
+function penaltyVal(x, mu) {
+  let p = objective(x);
+  const cst = evalConstraints(x);
+  [...cst.lin, ...cst.nonlin].forEach(c => {
+    const v = Math.max(0, c.val - c.lim);
+    p += mu * v * v;
+  });
+  x.forEach((xi, i) => {
+    p += mu * Math.pow(Math.max(0, LB[i]-xi), 2);
+    p += mu * Math.pow(Math.max(0, xi-UB[i]), 2);
+  });
+  return p;
+}
+
+// ════════════════════════════════════════════════════════
+// LOCAL SQP REFINEMENT (used after global search)
+// ════════════════════════════════════════════════════════
+function sqpRefine(x0, maxIter=300, tol=1e-7) {
+  let x = clampBounds([...x0]);
+  let mu = 1e6;
+  for (let iter = 0; iter < maxIter; iter++) {
+    const g = gradient(xv => penaltyVal(xv, mu), x);
+    const gnorm = Math.sqrt(g.reduce((s,gi) => s+gi*gi, 0));
+    if (gnorm < tol) break;
+    let step = 1.0;
+    const f0 = penaltyVal(x, mu);
+    const slope = -gnorm * gnorm;
+    for (let ls = 0; ls < 50; ls++) {
+      const xn = clampBounds(x.map((xi,i) => xi - step * g[i]/(gnorm+1e-12)));
+      if (penaltyVal(xn, mu) <= f0 + 1e-4 * step * slope) { x = xn; break; }
+      step *= 0.5;
+    }
+  }
+  return x;
+}
+
+// ════════════════════════════════════════════════════════
+// DIFFERENTIAL EVOLUTION (DE/rand/1/bin)
+// ════════════════════════════════════════════════════════
+async function deOptimize(popSize, maxGen, F_de, CR, logFn, progFn) {
+  const N = LB.length;
+  const mu = 1e8;
+
+  let pop = Array.from({length: popSize}, () =>
+    LB.map((lb, i) => lb + Math.random() * (UB[i]-lb))
+  );
+
+  let fits = pop.map(x => penaltyVal(x, mu));
+  let bestIdx = fits.indexOf(Math.min(...fits));
+  let bestX = [...pop[bestIdx]];
+  let bestF = fits[bestIdx];
+
+  for (let gen = 0; gen < maxGen; gen++) {
+    for (let i = 0; i < popSize; i++) {
+      let idxs = [];
+      while (idxs.length < 3) {
+        const kk = Math.floor(Math.random()*popSize);
+        if (kk !== i && !idxs.includes(kk)) idxs.push(kk);
+      }
+      const [a, b, c] = idxs;
+      const mutant = clampBounds(pop[a].map((xi,j) => xi + F_de*(pop[b][j]-pop[c][j])));
+      const jRand = Math.floor(Math.random()*N);
+      const trial = pop[i].map((xi,j) => (Math.random()<CR||j===jRand) ? mutant[j] : xi);
+      const fTrial = penaltyVal(trial, mu);
+      if (fTrial <= fits[i]) {
+        pop[i] = trial; fits[i] = fTrial;
+        if (fTrial < bestF) { bestF=fTrial; bestX=[...trial]; }
+      }
+    }
+    if (gen % 10 === 0) {
+      progFn(gen/maxGen * 0.85);
+      const fobj = objective(bestX);
+      logFn(`Gen ${(gen+1).toString().padStart(4,'0')} | best_V=${(fobj/1000).toFixed(1).padStart(12)} cm³ | feasible=${feasible(bestX)}`);
+      await new Promise(r => setTimeout(r,0));
+    }
+  }
+  return bestX;
+}
+
+// ════════════════════════════════════════════════════════
+// PARTICLE SWARM OPTIMIZATION (PSO)
+// ════════════════════════════════════════════════════════
+async function psoOptimize(popSize, maxIter, logFn, progFn) {
+  const N = LB.length;
+  const mu = 1e8;
+  const w=0.7, c1=1.5, c2=1.5;
+
+  const pos   = Array.from({length:popSize}, () => LB.map((lb,i) => lb+Math.random()*(UB[i]-lb)));
+  const vel   = Array.from({length:popSize}, () => LB.map((lb,i) => (Math.random()-0.5)*(UB[i]-lb)*0.2));
+  const pBest = pos.map(p => [...p]);
+  const pBestF= pos.map(p => penaltyVal(p, mu));
+
+  let gBestIdx = pBestF.indexOf(Math.min(...pBestF));
+  let gBest = [...pBest[gBestIdx]];
+  let gBestF= pBestF[gBestIdx];
+
+  for (let iter = 0; iter < maxIter; iter++) {
+    for (let i = 0; i < popSize; i++) {
+      for (let j = 0; j < N; j++) {
+        vel[i][j] = w*vel[i][j]
+          + c1*Math.random()*(pBest[i][j]-pos[i][j])
+          + c2*Math.random()*(gBest[j]-pos[i][j]);
+        const vmax = (UB[j]-LB[j])*0.3;
+        vel[i][j] = Math.max(-vmax, Math.min(vmax, vel[i][j]));
+        pos[i][j] = Math.max(LB[j], Math.min(UB[j], pos[i][j]+vel[i][j]));
+      }
+      const f = penaltyVal(pos[i], mu);
+      if (f < pBestF[i]) { pBest[i]=[...pos[i]]; pBestF[i]=f; }
+      if (f < gBestF)    { gBest=[...pos[i]]; gBestF=f; }
+    }
+    if (iter % 10 === 0) {
+      progFn(iter/maxIter * 0.85);
+      logFn(`PSO iter ${(iter+1).toString().padStart(4,'0')} | best_V=${(objective(gBest)/1000).toFixed(1).padStart(12)} cm³ | feasible=${feasible(gBest)}`);
+      await new Promise(r => setTimeout(r,0));
+    }
+  }
+  return gBest;
+}
+
+// ════════════════════════════════════════════════════════
+// MULTI-START SQP
+// ════════════════════════════════════════════════════════
+async function multiStartOptimize(nStarts, logFn, progFn) {
+  let allBestX = null, allBestF = Infinity;
+  for (let s = 0; s < nStarts; s++) {
+    const x0s = LB.map((lb,i) => lb + Math.random()*(UB[i]-lb));
+    const xLoc = sqpRefine(x0s, 500, 1e-8);
+    if (feasible(xLoc)) {
+      const f = objective(xLoc);
+      if (f < allBestF) { allBestF=f; allBestX=[...xLoc]; }
+    }
+    progFn((s+1)/nStarts * 0.9);
+    logFn(`Start ${(s+1).toString().padStart(3,'0')}/${nStarts} | V=${(objective(xLoc)/1000).toFixed(1).padStart(12)} cm³ | feasible=${feasible(xLoc)} | best_so_far=${(allBestF/1000).toFixed(1)} cm³`);
+    await new Promise(r => setTimeout(r,0));
+  }
+  return allBestX || LB.map((lb,i) => lb+0.5*(UB[i]-lb));
+}
+
+// ════════════════════════════════════════════════════════
+// MAIN OPTIMIZE DISPATCHER
+// ════════════════════════════════════════════════════════
+async function sqpOptimize(x0, maxIter, tol, logFn, progFn) {
+  const algo    = document.getElementById('p_algo').value;
+  const popSize = +document.getElementById('p_popSize').value;
+  const F_de    = +document.getElementById('p_deF').value;
+  const CR      = +document.getElementById('p_deCR').value;
+
+  let globalBest;
+
+  if (algo === 'de' || algo === 'de_sqp') {
+    logFn('[阶段1] 差分进化全局搜索 (DE/rand/1/bin)…', 'info');
+    globalBest = await deOptimize(popSize, maxIter, F_de, CR, logFn, progFn);
+    logFn(`DE完成 | V=${(objective(globalBest)/1000).toFixed(2)} cm³ | feasible=${feasible(globalBest)}`, 'info');
+
+  } else if (algo === 'pso') {
+    logFn('[阶段1] 粒子群全局搜索 (PSO)…', 'info');
+    globalBest = await psoOptimize(popSize, maxIter, logFn, progFn);
+    logFn(`PSO完成 | V=${(objective(globalBest)/1000).toFixed(2)} cm³ | feasible=${feasible(globalBest)}`, 'info');
+
+  } else if (algo === 'multistart') {
+    logFn(`[阶段1] 多起点SQP (${popSize}个起点)…`, 'info');
+    globalBest = await multiStartOptimize(popSize, logFn, progFn);
+    logFn(`多起点完成 | best_V=${(objective(globalBest)/1000).toFixed(2)} cm³`, 'info');
+
+  } else {
+    logFn('[梯度下降] 惩罚函数法…', 'info');
+    let x = clampBounds([...x0]);
+    let mu = 100;
+    for (let stage = 0; stage < 4; stage++) {
+      mu *= 10;
+      const stIter = Math.floor(maxIter/4);
+      for (let k = 0; k < stIter; k++) {
+        const g = gradient(xv => penaltyVal(xv, mu), x);
+        const gn = Math.sqrt(g.reduce((s,gi) => s+gi*gi, 0));
+        if (gn < tol) break;
+        let step = 0.3/(stage+1);
+        const f0 = penaltyVal(x, mu);
+        for (let ls=0; ls<30; ls++) {
+          const xn = clampBounds(x.map((xi,i) => xi - step*g[i]/(gn+1e-12)));
+          if (penaltyVal(xn,mu)<f0-1e-8) { x=xn; break; }
+          step*=0.5;
+        }
+        if (k%20===0) { progFn(stage*0.25+k/stIter*0.25); await new Promise(r=>setTimeout(r,0)); }
+      }
+    }
+    globalBest = x;
+  }
+
+  // ── SQP local refinement
+  if (algo !== 'sqp' && algo !== 'multistart') {
+    logFn('\n[阶段2] SQP局部精调…', 'info');
+    progFn(0.87);
+    const refined1 = sqpRefine(globalBest, 600, 1e-9);
+    const refined2 = sqpRefine(x0, 600, 1e-9);
+    let best = globalBest;
+    const candidates = [globalBest, refined1, refined2];
+    for (const cand of candidates) {
+      if (feasible(cand) && objective(cand) < objective(best)) best = cand;
+    }
+    if (!feasible(best)) {
+      best = candidates.reduce((a,b) => penaltyVal(a,1e6) < penaltyVal(b,1e6) ? a : b);
+    }
+    globalBest = best;
+    logFn(`SQP精调后 | V=${(objective(globalBest)/1000).toFixed(2)} cm³ | feasible=${feasible(globalBest)}`, 'info');
+  }
+
+  progFn(1.0);
+  logFn(`\n✓ 优化完成 | 最优体积 V = ${(objective(globalBest)/1000).toFixed(2)} cm³`, 'info');
+  return globalBest;
+}
+
+// ════════════════════════════════════════════════════════
+// CHART — 体积 V 随 z1 变化曲线（不同标准模数 m）
+// 菱形 = 该模数下接触强度临界齿数 z1c（低于此齿数接触强度不满足）
+// ════════════════════════════════════════════════════════
+function drawChart(xBefore, xAfter) {
+  const wrap = document.getElementById('chartWrap');
+  wrap.style.display = 'block';
+  const canvas = document.getElementById('volCanvas');
+  const dpr = window.devicePixelRatio || 1;
+
+  const W = Math.max((wrap.clientWidth || 680) - 28, 200);
+  const H_c = 460;
+  canvas.width  = Math.round(W * dpr);
+  canvas.height = Math.round(H_c * dpr);
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H_c + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H_c);
+
+  try {
+  const pad = { l: 96, r: 28, t: 56, b: 62 };
+  const cw = W - pad.l - pad.r;
+  const ch = H_c - pad.t - pad.b;
+
+  const i0 = P.i0();
+  const phiShow = xAfter ? xAfter[2] : xBefore[2];  // 曲线按当前/优化后 φd 绘制
+  const mList = [2.5, 3, 3.5, 4, 5, 6];
+  const mColors = ['#56b4ff','#4ddc82','#ffc645','#ff7043','#c58cff','#ff6b9d'];
+
+  const zMin = 16, zMax = 36;
+  const volAt = (m, z1, phi) => 0.25*Math.PI*(1+i0*i0)*Math.pow(m,3)*Math.pow(z1,3)*phi / 1000; // cm³
+
+  // 接触强度临界齿数 z1c：σH = [σH]2 取等号解出
+  const te = P.te(), k = P.k(), zh = P.zh(), ze = P.ze(), sh2 = P.sh2();
+  const cMin = Math.pow(zh*ze*Math.sqrt(2*k*te*(i0+1)/i0)/sh2, 2);
+  const z1c = (m, phi) => Math.pow(cMin/(phi*Math.pow(m,3)), 1/3);
+
+  // 生成曲线
+  const N_PTS = 200;
+  const curves = mList.map(m => {
+    const pts = [];
+    for (let i = 0; i <= N_PTS; i++) {
+      const z = zMin + i/N_PTS*(zMax-zMin);
+      pts.push({ x: z, y: volAt(m, z, phiShow) });
+    }
+    return { m, pts };
+  });
+
+  const yMaxData = Math.max(...curves.map(c => c.pts[N_PTS].y));
+  const yMin = 0;
+  const yMax = yMaxData * 1.08;
+
+  const toX = (v) => pad.l + (v - zMin)/(zMax - zMin) * cw;
+  const toY = (v) => pad.t + ch - (v - yMin)/(yMax - yMin) * ch;
+
+  // 背景
+  ctx.fillStyle = '#0f111a';
+  ctx.fillRect(0, 0, W, H_c);
+  ctx.fillStyle = '#161926';
+  ctx.fillRect(pad.l, pad.t, cw, ch);
+
+  // 网格
+  ctx.strokeStyle = '#2a2e45'; ctx.lineWidth = 0.8;
+  for (let v = 16; v <= 36; v += 2) {
+    const gx = toX(v);
+    ctx.beginPath(); ctx.moveTo(gx, pad.t); ctx.lineTo(gx, pad.t+ch); ctx.stroke();
+  }
+  for (let i = 0; i <= 6; i++) {
+    const gy = pad.t + i*ch/6;
+    ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(pad.l+cw, gy); ctx.stroke();
+  }
+
+  // 曲线
+  curves.forEach((c, ci) => {
+    ctx.strokeStyle = mColors[ci]; ctx.lineWidth = 2.5; ctx.setLineDash([]);
+    ctx.beginPath();
+    c.pts.forEach((p, i) => {
+      const px = toX(p.x), py = toY(p.y);
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    });
+    ctx.stroke();
+    // 曲线右端标注 m 值
+    const lastP = c.pts[N_PTS];
+    ctx.fillStyle = mColors[ci];
+    ctx.font = 'bold 11px "Courier New",monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('m=' + c.m, toX(zMax) - 46, toY(lastP.y) - 5);
+  });
+
+  // 临界齿数菱形标记
+  mList.forEach((m, ci) => {
+    const zc = z1c(m, phiShow);
+    if (zc < zMin || zc > zMax) return;
+    const px = toX(zc), py = toY(volAt(m, zc, phiShow));
+    const s = 6;
+    ctx.strokeStyle = mColors[ci]; ctx.lineWidth = 1.5; ctx.fillStyle = '#161926';
+    ctx.beginPath();
+    ctx.moveTo(px, py-s); ctx.lineTo(px+s, py); ctx.lineTo(px, py+s); ctx.lineTo(px-s, py);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = mColors[ci]; ctx.font = '10px "Courier New",monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('z₁c=' + zc.toFixed(1), px, py + s + 13);
+  });
+
+  // 优化前/后圆点
+  const markPt = (xArr, label, color) => {
+    const px = toX(xArr[1]), py = toY(volume(xArr)/1000);
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#f0eee8'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI*2); ctx.stroke();
+    ctx.font = 'bold 12px "微软雅黑",sans-serif';
+    ctx.textAlign = 'center'; ctx.fillStyle = color;
+    ctx.fillText(label, px, py - 14);
+    ctx.font = '10px "Courier New",monospace'; ctx.fillStyle = '#b0b4d0';
+    ctx.fillText(`m=${xArr[0].toFixed(2)} z₁=${xArr[1].toFixed(1)}`, px, py - 28);
+    ctx.fillText(`V=${(volume(xArr)/1000).toFixed(0)}cm³`, px, py + 22);
+  };
+  markPt(xBefore, xAfter ? '优化前' : '当前方案', '#f0eee8');
+  if (xAfter) markPt(xAfter, '优化后', '#ff7043');
+
+  // 边框与坐标轴
+  ctx.strokeStyle = '#404468'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+  ctx.strokeRect(pad.l, pad.t, cw, ch);
+  ctx.strokeStyle = '#8890bb';
+  ctx.beginPath(); ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t+ch+5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pad.l-5, pad.t+ch); ctx.lineTo(pad.l+cw, pad.t+ch); ctx.stroke();
+
+  // X 刻度
+  ctx.fillStyle='#b0b4d0'; ctx.font='12px "Courier New",monospace'; ctx.textAlign='center';
+  for (let v = 16; v <= 36; v += 2) {
+    const gx = toX(v);
+    ctx.beginPath(); ctx.moveTo(gx, pad.t+ch); ctx.lineTo(gx, pad.t+ch+5); ctx.stroke();
+    ctx.fillText(v.toString(), gx, pad.t+ch+17);
+  }
+  // Y 刻度
+  const rawYStep=(yMax-yMin)/6;
+  const mag=Math.pow(10,Math.floor(Math.log10(rawYStep)));
+  const niceY=Math.ceil(rawYStep/mag)*mag;
+  ctx.textAlign='right';
+  for (let v = 0; v <= yMax+niceY*0.1; v += niceY) {
+    const gy = toY(v);
+    if (gy < pad.t-2 || gy > pad.t+ch+2) continue;
+    ctx.beginPath(); ctx.moveTo(pad.l-5, gy); ctx.lineTo(pad.l, gy); ctx.stroke();
+    ctx.fillText(Math.round(v).toLocaleString(), pad.l-8, gy+4);
+  }
+
+  // 轴标签
+  ctx.save();
+  ctx.translate(18, pad.t+ch/2); ctx.rotate(-Math.PI/2);
+  ctx.textAlign='center'; ctx.font='13px "微软雅黑",sans-serif'; ctx.fillStyle='#c0c8e0';
+  ctx.fillText('减速器体积 V / cm³', 0, 0);
+  ctx.restore();
+  ctx.textAlign='center'; ctx.font='13px "微软雅黑",sans-serif'; ctx.fillStyle='#c0c8e0';
+  ctx.fillText('小齿轮齿数 z₁', pad.l+cw/2, pad.t+ch+46);
+
+  // 标题
+  ctx.textAlign='center'; ctx.font='bold 14px "微软雅黑",sans-serif'; ctx.fillStyle='#d0d8ff';
+  ctx.fillText(`体积 V–z₁ 特性曲线（φd = ${phiShow.toFixed(3)}）`, pad.l+cw/2, pad.t-32);
+  ctx.font='11px "微软雅黑",sans-serif'; ctx.fillStyle='#7880a8';
+  ctx.fillText('菱形◇=接触强度临界齿数（曲线在菱形以左不可行）· 优化方向：向左下方靠近临界点', pad.l+cw/2, pad.t-14);
+
+  } catch(e) {
+    ctx.fillStyle = '#ff6b6b';
+    ctx.font = '14px "微软雅黑",sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('图表渲染错误: ' + e.message, W/2, H_c/2);
+    console.error('drawChart error:', e);
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// ROUNDED VALUE HELPERS
+// ════════════════════════════════════════════════════════
+function getRounded() {
+  return VAR_IDS.map(id => {
+    const el = document.getElementById('rnd_' + id);
+    return el ? parseFloat(el.value) : NaN;
+  });
+}
+
+function autoRound() {
+  const xR = getRounded();
+  if (xR.some(v => isNaN(v))) return;
+  // m → 最近标准模数；z1 → 四舍五入整数并夹取 [17,35]；φd → 0.05 倍数
+  const mStd = STD_MODULES.reduce((a,b) => Math.abs(b-xR[0]) < Math.abs(a-xR[0]) ? b : a);
+  const z1Int = Math.max(17, Math.min(35, Math.round(xR[1])));
+  const phiR = Math.max(0.8, Math.min(1.4, Math.round(xR[2]/0.05)*0.05));
+  document.getElementById('rnd_m').value = mStd;
+  document.getElementById('rnd_z1').value = z1Int;
+  document.getElementById('rnd_faid').value = phiR.toFixed(2);
+  updateRoundedConstraints();
+}
+
+function updateRoundedConstraints() {
+  const xR = getRounded();
+  if (xR.some(v => isNaN(v))) return;
+  try {
+    const cstR = evalConstraints(xR);
+    const allCons = [...cstR.lin, ...cstR.nonlin];
+    allCons.forEach((c, ci) => {
+      const valCell = document.getElementById('rnd_con_val_' + ci);
+      const resCell = document.getElementById('rnd_con_res_' + ci);
+      if (!valCell || !resCell) return;
+      const vio = c.val > c.lim + 5e-4;
+      const margin = -(c.val - c.lim);
+      const marginTxt = (margin >= 0 ? '余量 +' : '超限 ') + Math.abs(margin).toFixed(3);
+      valCell.textContent = parseFloat(c.val.toFixed(3));
+      resCell.innerHTML = vio
+        ? `<span class="badge-vio">✗ 违反</span><br><small style="color:var(--err);font-size:11px">${marginTxt}</small>`
+        : `<span class="badge-ok">✓ 满足</span><br><small style="color:var(--ok);font-size:11px">${marginTxt}</small>`;
+    });
+    // 圆整后体积提示
+    const vInfo = document.getElementById('rndVolInfo');
+    if (vInfo) {
+      const vR = volume(xR)/1000;
+      const vMin = theoreticalMinVol()/1000;
+      vInfo.textContent = `圆整后体积 V = ${vR.toFixed(1)} cm³（理论下限 ${vMin.toFixed(1)} cm³，超出 ${((vR/vMin-1)*100).toFixed(1)}%）`;
+      vInfo.style.color = vR/vMin <= 1.10 ? 'var(--ok)' : vR/vMin <= 1.25 ? 'var(--warn)' : 'var(--err)';
+    }
+  } catch(e) {
+    console.warn('updateRoundedConstraints error:', e);
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// RENDER RESULTS
+// ════════════════════════════════════════════════════════
+function fmt(v, dp=2) {
+  if (v === null || v === undefined || isNaN(v) || !isFinite(v)) return '—';
+  return parseFloat(v.toFixed(dp)).toString();
+}
+
+function renderResults(x0, xOpt) {
+  document.getElementById('hintBox').style.display = 'none';
+  const noOpt = xOpt === null;
+  const xShow = noOpt ? x0 : xOpt;
+
+  const i0 = P.i0();
+  const st0  = stresses(x0);
+  const stN  = noOpt ? null : stresses(xShow);
+  const V0   = volume(x0);
+  const Vopt = noOpt ? null : volume(xShow);
+  const Vmin = theoreticalMinVol();
+
+  const dPct = (a, b) => {
+    if (b === null) return '';
+    const p = (b - a) / (Math.abs(a) + 1e-10) * 100;
+    const cls = p < 0 ? 'improved' : p > 0.01 ? 'worsened' : 'neutral';
+    const arrow = p < 0 ? '▼' : p > 0.01 ? '▲' : '─';
+    return `<span class="${cls}">${arrow} ${Math.abs(p).toFixed(1)}%</span>`;
+  };
+  const dAbs = (a, b, dp=2) => {
+    if (b === null) return '—';
+    const d = b - a;
+    const cls = d < 0 ? 'improved' : d > 0.01 ? 'worsened' : 'neutral';
+    const sign = d >= 0 ? '+' : '';
+    return `<span class="${cls}">${sign}${fmt(d,dp)}</span>`;
+  };
+
+  const rows = [
+    ['体积 V (cm³)',            V0/1000,        Vopt===null?null:Vopt/1000,  ''],
+    ['σH 齿面接触应力',         st0.sH,         stN?.sH,     'MPa'],
+    ['σF₁ 小齿轮弯曲应力',      st0.sF1,        stN?.sF1,    'MPa'],
+    ['σF₂ 大齿轮弯曲应力',      st0.sF2,        stN?.sF2,    'MPa'],
+    ['z₂ = i₀·z₁ 大齿轮齿数',   i0*x0[1],       noOpt?null:i0*xShow[1],      '—'],
+    ['d₁ = m·z₁ 分度圆直径',    x0[0]*x0[1],    noOpt?null:xShow[0]*xShow[1],'mm'],
+    ['b = φd·d₁ 齿宽',          x0[2]*x0[0]*x0[1], noOpt?null:xShow[2]*xShow[0]*xShow[1], 'mm'],
+    ['V / Vmin理论',            V0/Vmin,        noOpt?null:Vopt/Vmin,        '—'],
+  ];
+
+  document.getElementById('objPanel').style.display = 'block';
+  document.getElementById('objSummary').innerHTML = `
+    <div class="obj-summary">
+      <div class="obj-col oc-before">
+        <div class="oc-head">📊 优化前（初值）</div>
+        ${rows.map(([lbl, v0,, unit]) =>
+          `<div class="oc-row">
+            <span class="oc-label">${lbl}</span>
+            <span class="oc-val neutral">${fmt(v0,2)} ${unit}</span>
+          </div>`).join('')}
+      </div>
+      <div class="obj-col oc-after">
+        <div class="oc-head">${noOpt ? '📋 当前参数' : '✅ 优化后（最优）'}</div>
+        ${rows.map(([lbl, v0, vN, unit]) => {
+          const v = noOpt ? v0 : (vN ?? v0);
+          const cls = (!noOpt && vN!==null && vN!==undefined) ? (vN < v0 ? 'improved' : vN > v0+0.01 ? 'worsened' : 'neutral') : 'neutral';
+          return `<div class="oc-row">
+            <span class="oc-label">${lbl}</span>
+            <span class="oc-val ${cls}">${fmt(v,2)} ${unit}</span>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="obj-col oc-delta">
+        <div class="oc-head">📈 变化量（优化后−前）</div>
+        ${noOpt
+          ? `<div style="color:#aaa;font-size:11px;padding-top:8px">运行优化后显示</div>`
+          : rows.map(([lbl, v0, vN]) =>
+              `<div class="oc-row">
+                <span class="oc-label">${lbl}</span>
+                <span class="oc-val">${dAbs(v0, vN ?? v0)} &nbsp; ${dPct(v0, vN ?? v0)}</span>
+              </div>`).join('')
+        }
+      </div>
+    </div>`;
+
+  const makeCard = (label, v0, vOpt, unit, goodDown=true) => {
+    const pct = (vOpt===null||vOpt===undefined) ? null : ((vOpt-v0)/Math.abs(v0+1e-10)*100);
+    const arrow = pct===null ? '' : pct<0 ? (goodDown?'▼ 改善':'▲ 改善') : (goodDown?'▲ 劣化':'▼ 劣化');
+    const cls   = pct===null ? '' : ((pct<0)===goodDown) ? 'dn' : 'up';
+    return `<div class="res-card">
+      <div class="rc-label">${label}</div>
+      <div class="rc-val">${fmt(vOpt===null||vOpt===undefined?v0:vOpt)}</div>
+      <div class="rc-unit">${unit}</div>
+      ${pct!==null?`<div class="rc-delta ${cls}">${arrow} ${Math.abs(pct).toFixed(1)}%（初值${fmt(v0)}）</div>`:''}
+    </div>`;
+  };
+
+  document.getElementById('objCards').innerHTML =
+    makeCard('体积 V', V0/1000, Vopt===null?null:Vopt/1000, 'cm³') +
+    makeCard('体积减小百分比', 0, noOpt?null:(Vopt-V0)/V0*100, '%') +
+    makeCard('V / Vmin理论（→1 为最优）', V0/Vmin, noOpt?null:Vopt/Vmin, '—') +
+    makeCard('σH 齿面接触应力（≤'+P.sh2()+'）', st0.sH, stN?.sH, 'MPa') +
+    makeCard('σF₁ 小齿轮弯曲应力（≤'+P.sf1()+'）', st0.sF1, stN?.sF1, 'MPa') +
+    makeCard('σF₂ 大齿轮弯曲应力（≤'+P.sf2()+'）', st0.sF2, stN?.sF2, 'MPa') +
+    makeCard('YF1 小齿轮齿形系数', st0.yf1, stN?.yf1, '—') +
+    makeCard('YS1 小齿轮应力校正系数', st0.ys1, stN?.ys1, '—') +
+    makeCard('YF2 大齿轮齿形系数', st0.yf2, stN?.yf2, '—') +
+    makeCard('YS2 大齿轮应力校正系数', st0.ys2, stN?.ys2, '—');
+
+  // ── Variable table
+  document.getElementById('varPanel').style.display = 'block';
+  const rndHints = ['标准系列 2/2.5/3/3.5/4/5/6/8/10', '取整数', '取 0.05 倍数'];
+  let varRows = '';
+  VAR_IDS.forEach((id, i) => {
+    const v0 = x0[i], vN = noOpt ? null : xShow[i];
+    const diff = vN===null ? '' : (vN-v0>=0?'+':'')+fmt(vN-v0,3);
+    const atLB = vN!==null && Math.abs(vN-LB[i])<0.01;
+    const atUB = vN!==null && Math.abs(vN-UB[i])<0.01;
+    const status = vN===null ? '' : atLB ? `<span class="badge-warn">下界</span>` : atUB ? `<span class="badge-warn">上界</span>` : `<span class="badge-ok">内部</span>`;
+    const rndVal = vN !== null ? fmt(vN, 3) : fmt(v0, 3);
+    varRows += `<tr>
+      <td><b>${VAR_NAMES[i]}</b></td>
+      <td>${VAR_DESC[i]}<br><small style="color:var(--hint-color);font-size:11px">${rndHints[i]}</small></td>
+      <td>${fmt(v0,3)}</td>
+      <td>${vN===null?'—':`<b>${fmt(vN,3)}</b>`}</td>
+      <td>${diff}</td>
+      <td>${LB[i]}</td><td>${UB[i]}</td>
+      <td>${status}</td>
+      <td><input type="number" class="rnd-input" id="rnd_${id}" value="${rndVal}" step="0.01"
+           oninput="updateRoundedConstraints()" style="width:100%;padding:6px 8px;
+           border:2px solid var(--accent);border-radius:4px;font-size:15px;
+           font-family:var(--mono);background:var(--input-bg);color:var(--ink);"></td>
+    </tr>`;
+  });
+  document.getElementById('varBody').innerHTML = varRows;
+
+  // ── Constraints
+  document.getElementById('conPanel').style.display = 'block';
+  const cst0 = evalConstraints(x0);
+  const cstN = noOpt ? null : evalConstraints(xShow);
+  let crows = '';
+  let conIdx = 0;
+  const renderCon = (c, i, ctype, cOld) => {
+    const vio0 = cOld.val > cOld.lim + 5e-4;
+    const vio1 = cstN && c.val > c.lim + 5e-4;
+    const b0 = vio0 ? '<span class="badge-vio">✗ 违反</span>' : '<span class="badge-ok">✓ 满足</span>';
+    const b1 = noOpt ? '' : (vio1 ? '<span class="badge-vio">✗</span>' : '<span class="badge-ok">✓</span>');
+    const ci = conIdx++;
+    crows += `<tr>
+      <td>${i+1}</td>
+      <td>${c.label}</td>
+      <td>${ctype}</td>
+      <td>${fmt(cOld.val,3)} ${b0}</td>
+      <td>${noOpt?'—':`${fmt(c.val,3)} ${b1}`}</td>
+      <td>≤ ${c.lim}</td>
+      <td>${noOpt?'—':(vio1?'<span class="badge-vio">✗</span>':'<span class="badge-ok">✓</span>')}</td>
+      <td id="rnd_con_val_${ci}" style="font-family:var(--mono);color:var(--label-color)">—</td>
+      <td id="rnd_con_res_${ci}">—</td>
+    </tr>`;
+  };
+  cst0.lin.forEach((c,i) => renderCon(cstN?cstN.lin[i]:c, i, '边界', c));
+  cst0.nonlin.forEach((c,i) => renderCon(cstN?cstN.nonlin[i]:c, i, '非线性(强度)', c));
+  document.getElementById('conBody').innerHTML = crows;
+
+  updateRoundedConstraints();
+
+  // ── Mechanics cards
+  document.getElementById('mechPanel').style.display = 'block';
+  const z2_0 = i0*x0[1], z2_N = noOpt?null:i0*xShow[1];
+  const d1_0 = x0[0]*x0[1], d1_N = noOpt?null:xShow[0]*xShow[1];
+  const d2_0 = x0[0]*z2_0, d2_N = noOpt?null:xShow[0]*z2_N;
+  const b_0 = x0[2]*d1_0, b_N = noOpt?null:xShow[2]*d1_N;
+  const a_0 = x0[0]*(x0[1]+z2_0)/2, a_N = noOpt?null:xShow[0]*(xShow[1]+z2_N)/2;
+  document.getElementById('mechCards').innerHTML =
+    makeCard('z₂ = i₀·z₁ 大齿轮齿数', z2_0, z2_N, '—', false) +
+    makeCard('d₁ = m·z₁ 小齿轮分度圆直径', d1_0, d1_N, 'mm') +
+    makeCard('d₂ = m·z₂ 大齿轮分度圆直径', d2_0, d2_N, 'mm') +
+    makeCard('b = φd·d₁ 齿宽', b_0, b_N, 'mm') +
+    makeCard('a = m(z₁+z₂)/2 中心距', a_0, a_N, 'mm') +
+    makeCard('接触应力利用度 σH/[σH]₂', st0.sH/P.sh2(), stN?stN.sH/P.sh2():null, '—', false) +
+    makeCard('弯曲利用度 σF₁/[σF]₁', st0.sF1/P.sf1(), stN?stN.sF1/P.sf1():null, '—', false) +
+    makeCard('弯曲利用度 σF₂/[σF]₂', st0.sF2/P.sf2(), stN?stN.sF2/P.sf2():null, '—', false) +
+    makeCard('理论最小体积 Vmin', Vmin/1000, null, 'cm³', false);
+
+  // ── Chart
+  drawChart(x0, noOpt ? null : xShow);
+}
+
+// ════════════════════════════════════════════════════════
+// MAIN ENTRY POINTS
+// ════════════════════════════════════════════════════════
+function log(msg, type='') {
+  const box = document.getElementById('logBox');
+  const cls = type?`log-${type}`:'';
+  box.innerHTML += `<span class="${cls}">${msg}\n</span>`;
+  box.scrollTop = box.scrollHeight;
+}
+
+async function runOptimize() {
+  const x0 = getX0();
+  const maxIter = +document.getElementById('p_maxIter').value;
+  const tol = +document.getElementById('p_tol').value;
+
+  document.getElementById('btnRun').disabled = true;
+  document.getElementById('progressPanel').style.display = 'block';
+  document.getElementById('logBox').innerHTML = '';
+  document.getElementById('hintBox').style.display = 'none';
+
+  log('═══ 单级主减速器体积最小化优化（3变量 SQP）═══', 'info');
+  log(`初值: m=${x0[0]}, z₁=${x0[1]}, φd=${x0[2]}`);
+  log(`固定参数: T₁=${P.te()} N·mm, i₀=${P.i0()}, [σH]₂=${P.sh2()}, [σF]₁=${P.sf1()}, [σF]₂=${P.sf2()} MPa`);
+  const st_init = stresses(x0);
+  log(`初始体积 V = ${(volume(x0)/1000).toFixed(2)} cm³ | 理论下限 Vmin = ${(theoreticalMinVol()/1000).toFixed(2)} cm³`);
+  log(`初始应力: σH=${st_init.sH.toFixed(1)} / σF₁=${st_init.sF1.toFixed(1)} / σF₂=${st_init.sF2.toFixed(1)} MPa`);
+  const cst0 = evalConstraints(x0);
+  const vio0 = [...cst0.lin,...cst0.nonlin].filter(c=>c.val>c.lim+5e-4).length;
+  log(`初始违反约束数: ${vio0}`, vio0>0?'warn':'');
+  log('─'.repeat(60));
+
+  try {
+    const xOpt = await sqpOptimize(
+      x0, maxIter, tol,
+      (msg) => log(msg),
+      (pct) => {
+        document.getElementById('pFill').style.width = (pct*100)+'%';
+        document.getElementById('pLabel').textContent = `优化进度 ${(pct*100).toFixed(0)}%`;
+      }
+    );
+
+    const cstFinal = evalConstraints(xOpt);
+    const vioFinal = [...cstFinal.lin,...cstFinal.nonlin].filter(c=>c.val>c.lim+5e-4).length;
+    const stF = stresses(xOpt);
+    log(`\n最优解: m=${xOpt[0].toFixed(4)}, z₁=${xOpt[1].toFixed(4)}, φd=${xOpt[2].toFixed(4)}`, 'info');
+    log(`最优体积 V = ${(volume(xOpt)/1000).toFixed(2)} cm³（减小 ${((1-volume(xOpt)/volume(x0))*100).toFixed(1)}%）`, 'info');
+    log(`最优应力: σH=${stF.sH.toFixed(1)} / σF₁=${stF.sF1.toFixed(1)} / σF₂=${stF.sF2.toFixed(1)} MPa`, 'info');
+    log(`最终违反约束数: ${vioFinal}`, vioFinal>0?'warn':'info');
+    log('提示：请在变量表中对 m 取标准模数、z₁ 取整数后，查看圆整后约束校核。', 'info');
+    if (vioFinal > 0) {
+      log('⚠ 部分约束仍有违反，建议调整初值后重新运行', 'warn');
+    }
+
+    renderResults(x0, xOpt);
+    updateScoreReport(x0, xOpt);
+  } catch(e) {
+    log('✗ 优化出错: ' + e.message, 'err');
+  }
+
+  document.getElementById('btnRun').disabled = false;
+  document.getElementById('pLabel').textContent = '优化完成';
+}
+
+function evalCurrent() {
+  const x0 = getX0();
+  document.getElementById('hintBox').style.display = 'none';
+  document.getElementById('progressPanel').style.display = 'none';
+  renderResults(x0, null);
+  updateScoreReport(x0, null);
+}
+
+// Init
+resetToDefault();
+
+// ════════════════════════════════════════════════════════
+// 学生登录 · 教师管理
+// ════════════════════════════════════════════════════════
+const TEACHER_PASSWORD_AXLE = ['gxu','qpp','123'].join(''); // 教师密码（可修改）
+let axleTeacherData = [];
+
+const axleState = {
+  studentId: '',
+  studentName: '',
+  isTeacher: false
+};
+
+function submitLogin() {
+  const id   = document.getElementById('li_studentId').value.trim();
+  const name = document.getElementById('li_studentName').value.trim();
+  const idErr   = document.getElementById('li_idErr');
+  const nameErr = document.getElementById('li_nameErr');
+  let ok = true;
+
+  if (!/^\d{10}$/.test(id)) { idErr.style.display = 'block'; ok = false; }
+  else idErr.style.display = 'none';
+
+  if (name.length < 2) { nameErr.style.display = 'block'; ok = false; }
+  else nameErr.style.display = 'none';
+
+  if (!ok) return;
+
+  axleState.studentId   = id;
+  axleState.studentName = name;
+
+  document.getElementById('dispId').textContent   = id;
+  document.getElementById('dispName').textContent = name;
+  document.getElementById('stuBadge').style.display = 'block';
+  document.getElementById('loginOverlay').style.display = 'none';
+}
+
+function openTeacherLogin() {
+  document.getElementById('teacherLoginOverlay').style.display = 'flex';
+  document.getElementById('li_teacherPwd').value = '';
+  document.getElementById('li_pwdErr').style.display = 'none';
+  setTimeout(() => document.getElementById('li_teacherPwd').focus(), 100);
+}
+function closeTeacherLogin() {
+  document.getElementById('teacherLoginOverlay').style.display = 'none';
+}
+function submitTeacherLogin() {
+  const pwd = document.getElementById('li_teacherPwd').value;
+  if (pwd === TEACHER_PASSWORD_AXLE) {
+    axleState.isTeacher = true;
+    document.getElementById('teacherLoginOverlay').style.display = 'none';
+    showTeacherPanel();
+  } else {
+    document.getElementById('li_pwdErr').style.display = 'block';
+  }
+}
+
+// ── 教师统计面板 ─────────────────────────────────────────
+function showTeacherPanel() {
+  const old = document.getElementById('axleTeacherPanel');
+  if (old) old.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'teacher-overlay';
+  overlay.id = 'axleTeacherPanel';
+
+  overlay.innerHTML = `
+  <div class="teacher-panel">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+      <div>
+        <h2>📊 教师统计管理系统（离线版）</h2>
+        <div class="tp-sub">单级主减速器优化设计 · 批量导入学生报告 · 自动统计分析</div>
+      </div>
+      <button class="btn btn-sec" style="font-size:13px;padding:8px 18px" onclick="closeAxleTeacherPanel()">✕ 关闭</button>
+    </div>
+
+    <div class="tp-card">
+      <div class="tp-card-title">📁 导入学生数据文件</div>
+      <div class="tp-info-box">
+        <strong>使用说明：</strong><br>
+        1. 收集所有学生提交的 <strong>TXT 报告文件</strong>（由学生点击"生成评分报告文件"下载）<br>
+        2. 点击下方区域或拖拽文件批量导入（支持多文件同时拖入）<br>
+        3. 系统自动从 TXT 文件中提取 JSON 评分数据，生成班级统计<br>
+        4. 点击"导出CSV"可在 Excel 中进行进一步分析
+      </div>
+      <input type="file" id="axleFileInput" multiple accept=".txt,.json"
+             style="display:none" onchange="handleAxleFileSelect(event)">
+      <div class="tp-upload-zone" id="axleUploadZone"
+           onclick="document.getElementById('axleFileInput').click()">
+        <div class="uiz">📂</div>
+        <div class="uit">点击选择文件 或 拖拽文件到此处</div>
+        <div class="uih">支持批量导入 TXT 或 JSON 文件 · 文件不会离开您的设备</div>
+      </div>
+      <div id="axleUploadStatus" style="margin-top:10px;font-size:13px;color:var(--label-color)"></div>
+    </div>
+
+    <div id="axleStatsContent"></div>
+  </div>`;
+
+  document.body.appendChild(overlay);
+
+  const zone = overlay.querySelector('#axleUploadZone');
+  zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('dragover');
+    handleAxleFileSelect({ target: { files: e.dataTransfer.files } });
+  });
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeAxleTeacherPanel(); });
+
+  if (axleTeacherData.length > 0) displayAxleStats();
+}
+
+function closeAxleTeacherPanel() {
+  const p = document.getElementById('axleTeacherPanel');
+  if (p) p.remove();
+}
+
+// ── 文件导入 ────────────────────────────────────────────
+function handleAxleFileSelect(event) {
+  const files = event.target.files;
+  if (!files || files.length === 0) return;
+
+  const statusDiv = document.getElementById('axleUploadStatus');
+  if (statusDiv) statusDiv.innerHTML = '<span style="color:var(--accent2)">正在处理文件…</span>';
+
+  let loaded = 0, errors = 0;
+
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const content = e.target.result;
+        let data = null;
+
+        if (file.name.endsWith('.txt')) {
+          const match = content.match(/--- SYSTEM DATA BEGIN ---\s*([\s\S]*?)\s*--- SYSTEM DATA END ---/);
+          if (match && match[1]) data = JSON.parse(match[1].trim());
+          else { errors++; return; }
+        } else if (file.name.endsWith('.json')) {
+          data = JSON.parse(content);
+        } else { errors++; return; }
+
+        if (data && data.studentId && data.studentName && data.totalScore !== undefined
+            && data.reportType === 'axle_single_optimizer') {
+          const dup = axleTeacherData.find(d => d.studentId === data.studentId && d.timestamp === data.timestamp);
+          if (!dup) axleTeacherData.push(data);
+          loaded++;
+        } else errors++;
+      } catch(err) { errors++; }
+
+      if (loaded + errors === files.length) {
+        if (statusDiv) statusDiv.innerHTML =
+          `<span style="color:var(--ok)">✓ 成功处理 ${loaded} 个文件</span>` +
+          (errors > 0 ? `<span style="color:var(--err);margin-left:12px">✗ ${errors} 个文件失败或格式不符</span>` : '');
+        if (loaded > 0) displayAxleStats();
+      }
+    };
+    reader.readAsText(file);
+  });
+}
+
+// ── 统计分析与显示 ──────────────────────────────────────
+function analyzeAxleData(data) {
+  const map = {};
+  data.forEach(rec => {
+    const id = rec.studentId;
+    if (!map[id]) map[id] = {
+      studentId: id, studentName: rec.studentName,
+      submissions: [], count: 0, totalScore: 0,
+      maxScore: 0, minScore: 100, firstTime: null, lastTime: null
+    };
+    const s = map[id];
+    s.submissions.push(rec); s.count++;
+    s.totalScore += rec.totalScore;
+    s.maxScore = Math.max(s.maxScore, rec.totalScore);
+    s.minScore = Math.min(s.minScore, rec.totalScore);
+    const t = new Date(rec.timestamp);
+    if (!s.firstTime || t < s.firstTime) s.firstTime = t;
+    if (!s.lastTime  || t > s.lastTime)  s.lastTime  = t;
+  });
+  const students = Object.values(map);
+  students.forEach(s => {
+    s.avgScore = s.totalScore / s.count;
+    s.submissions.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+  });
+  const avg = students.length ? students.reduce((acc,s) => acc + s.avgScore, 0) / students.length : 0;
+  return {
+    totalStudents: students.length, totalSubmissions: data.length,
+    avgScore: avg,
+    students: students.sort((a,b) => a.studentId.localeCompare(b.studentId))
+  };
+}
+
+function displayAxleStats() {
+  const stats  = analyzeAxleData(axleTeacherData);
+  const cont   = document.getElementById('axleStatsContent');
+  if (!cont) return;
+
+  const dist = [0,0,0,0,0];
+  stats.students.forEach(s => {
+    if (s.avgScore >= 90) dist[0]++;
+    else if (s.avgScore >= 80) dist[1]++;
+    else if (s.avgScore >= 70) dist[2]++;
+    else if (s.avgScore >= 60) dist[3]++;
+    else dist[4]++;
+  });
+
+  cont.innerHTML = `
+  <div class="tp-card">
+    <div class="tp-card-title">📈 班级总体统计</div>
+    <div class="tp-stats-grid">
+      <div class="tp-stat-item"><div class="tsi-label">学生总数</div><div class="tsi-val">${stats.totalStudents}</div></div>
+      <div class="tp-stat-item"><div class="tsi-label">提交总次数</div><div class="tsi-val">${stats.totalSubmissions}</div></div>
+      <div class="tp-stat-item"><div class="tsi-label">班级平均分</div><div class="tsi-val">${stats.avgScore.toFixed(1)}</div></div>
+      <div class="tp-stat-item"><div class="tsi-label">优秀（≥90）</div><div class="tsi-val">${dist[0]}</div></div>
+      <div class="tp-stat-item"><div class="tsi-label">良好（80~89）</div><div class="tsi-val">${dist[1]}</div></div>
+      <div class="tp-stat-item"><div class="tsi-label">中等（70~79）</div><div class="tsi-val">${dist[2]}</div></div>
+      <div class="tp-stat-item"><div class="tsi-label">及格（60~69）</div><div class="tsi-val">${dist[3]}</div></div>
+      <div class="tp-stat-item"><div class="tsi-label">不及格（<60）</div><div class="tsi-val">${dist[4]}</div></div>
+    </div>
+  </div>
+
+  <div class="tp-card">
+    <div class="tp-card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <span>👥 学生列表（点击展开详情）</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sec" style="font-size:12px;padding:6px 12px" onclick="exportAxleCSV()">📊 导出汇总CSV</button>
+        <button class="btn btn-sec" style="font-size:12px;padding:6px 12px" onclick="exportAxleDetailCSV()">📋 导出详细记录</button>
+        <button class="btn" style="background:#3a1010;color:var(--err);border:1px solid var(--err);font-size:12px;padding:6px 12px"
+                onclick="clearAxleData()">🗑️ 清空数据</button>
+      </div>
+    </div>
+    <div id="axleStudentList" style="max-height:500px;overflow-y:auto;margin-top:10px"></div>
+  </div>`;
+
+  const listEl = document.getElementById('axleStudentList');
+  if (!listEl) return;
+  if (stats.students.length === 0) {
+    listEl.innerHTML = '<div style="text-align:center;padding:40px;color:var(--hint-color)">暂无数据</div>';
+    return;
+  }
+  listEl.innerHTML = stats.students.map(s => {
+    const g = s.avgScore >= 90 ? '优秀' : s.avgScore >= 80 ? '良好' : s.avgScore >= 70 ? '中等' : s.avgScore >= 60 ? '及格' : '不及格';
+    const gc = s.avgScore >= 80 ? 'var(--ok)' : s.avgScore >= 60 ? 'var(--warn)' : 'var(--err)';
+    return `
+    <div class="stu-list-item" onclick="toggleAxleDetail('${s.studentId}')">
+      <div class="sli-hdr">
+        <span class="sli-name">${s.studentName} (${s.studentId})</span>
+        <span class="sli-score" style="color:${gc}">平均 ${s.avgScore.toFixed(1)} 分（${g}）· 提交 ${s.count} 次</span>
+      </div>
+      <div class="sli-detail">
+        最高：${s.maxScore} 分 | 最低：${s.minScore} 分 |
+        首次：${s.firstTime.toLocaleString('zh-CN')} | 最后：${s.lastTime.toLocaleString('zh-CN')}
+      </div>
+      <div id="axleDetail_${s.studentId}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--grid)">
+        <table class="stu-sub-table">
+          <thead><tr>
+            <th>#</th><th>提交时间</th><th>总分</th>
+            <th>接触强度/25</th><th>弯曲强度/25</th><th>体积优化/20</th><th>参数合理/20</th><th>约束满足/10</th><th>等级</th>
+          </tr></thead>
+          <tbody>
+            ${s.submissions.map((sub,idx) => {
+              const sg = sub.totalScore >= 90 ? '优秀' : sub.totalScore >= 80 ? '良好' : sub.totalScore >= 70 ? '中等' : sub.totalScore >= 60 ? '及格' : '不及格';
+              return `<tr>
+                <td>${idx+1}</td>
+                <td>${new Date(sub.timestamp).toLocaleString('zh-CN')}</td>
+                <td><strong>${sub.totalScore}</strong></td>
+                <td>${sub.scores.s1||'-'}</td><td>${sub.scores.s2||'-'}</td>
+                <td>${sub.scores.s3||'-'}</td><td>${sub.scores.s4||'-'}</td><td>${sub.scores.s5||'-'}</td>
+                <td>${sg}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleAxleDetail(id) {
+  const el = document.getElementById('axleDetail_' + id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function clearAxleData() {
+  if (confirm('确定清空所有已导入的学生数据？此操作不可恢复！')) {
+    axleTeacherData = [];
+    displayAxleStats();
+  }
+}
+
+// ── CSV导出 ────────────────────────────────────────────
+function exportAxleCSV() {
+  if (axleTeacherData.length === 0) { alert('请先导入学生数据！'); return; }
+  const stats = analyzeAxleData(axleTeacherData);
+  let csv = '﻿学号,姓名,提交次数,平均分,最高分,最低分,等级,首次提交时间,最后提交时间\n';
+  stats.students.forEach(s => {
+    const g = s.avgScore >= 90 ? '优秀' : s.avgScore >= 80 ? '良好' : s.avgScore >= 70 ? '中等' : s.avgScore >= 60 ? '及格' : '不及格';
+    csv += `${s.studentId},${s.studentName},${s.count},${s.avgScore.toFixed(1)},${s.maxScore},${s.minScore},${g},${s.firstTime.toLocaleString('zh-CN')},${s.lastTime.toLocaleString('zh-CN')}\n`;
+  });
+  csv += '\n分数段,人数,占比\n';
+  const dist = [['90-100（优秀）',0],['80-89（良好）',0],['70-79（中等）',0],['60-69（及格）',0],['60分以下（不及格）',0]];
+  stats.students.forEach(s => {
+    if (s.avgScore >= 90) dist[0][1]++;
+    else if (s.avgScore >= 80) dist[1][1]++;
+    else if (s.avgScore >= 70) dist[2][1]++;
+    else if (s.avgScore >= 60) dist[3][1]++;
+    else dist[4][1]++;
+  });
+  dist.forEach(d => {
+    const pct = stats.students.length ? (d[1]/stats.students.length*100).toFixed(1)+'%' : '0%';
+    csv += `${d[0]},${d[1]},${pct}\n`;
+  });
+  downloadAxleCSV(csv, `主减速器优化设计_学生统计_${new Date().toISOString().slice(0,10)}.csv`);
+}
+
+function exportAxleDetailCSV() {
+  if (axleTeacherData.length === 0) { alert('请先导入学生数据！'); return; }
+  const stats = analyzeAxleData(axleTeacherData);
+  let csv = '﻿学号,姓名,提交时间,总分,接触强度,弯曲强度,体积优化,参数合理,约束满足,等级\n';
+  stats.students.forEach(s => {
+    s.submissions.forEach(sub => {
+      const g = sub.totalScore >= 90 ? '优秀' : sub.totalScore >= 80 ? '良好' : sub.totalScore >= 70 ? '中等' : sub.totalScore >= 60 ? '及格' : '不及格';
+      csv += `${s.studentId},${s.studentName},${new Date(sub.timestamp).toLocaleString('zh-CN')},${sub.totalScore},${sub.scores.s1||0},${sub.scores.s2||0},${sub.scores.s3||0},${sub.scores.s4||0},${sub.scores.s5||0},${g}\n`;
+    });
+  });
+  downloadAxleCSV(csv, `主减速器优化设计_详细记录_${new Date().toISOString().slice(0,10)}.csv`);
+}
+
+function downloadAxleCSV(csvContent, filename) {
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// ════════════════════════════════════════════════════════
+// 智能评分系统
+// 评分维度（100分）：
+//   ① 齿面接触疲劳强度 /25
+//   ② 齿根弯曲疲劳强度 /25
+//   ③ 体积优化效果     /20
+//   ④ 参数工程合理性   /20
+//   ⑤ 约束满足度       /10
+// ════════════════════════════════════════════════════════
+let _lastScoreResult = null;
+let _lastX0 = null;
+let _lastXOpt = null;
+
+function computeAxleScore(x, isOptimized, x0ref) {
+  const st  = stresses(x);
+  const cst = evalConstraints(x);
+  const allCon    = [...cst.lin, ...cst.nonlin];
+  const violations = allCon.filter(c => c.val > c.lim + 5e-4).length;
+  const totalCon   = allCon.length;
+
+  const m = x[0], z1 = x[1], phi = x[2];
+  const V = volume(x);
+  const Vmin = theoreticalMinVol();
+  const vRatio = V / Vmin;
+  // 相对初值的体积减小率（仅优化/圆整评分时有意义）
+  const V0ref = x0ref ? volume(x0ref) : null;
+  const volRed = V0ref ? (V0ref - V) / V0ref : 0;
+  const sh2 = P.sh2(), sf1 = P.sf1(), sf2 = P.sf2();
+  const rH  = st.sH  / sh2;   // 接触应力利用度
+  const rF1 = st.sF1 / sf1;
+  const rF2 = st.sF2 / sf2;
+
+  const sections = [];
+
+  // ── S1 齿面接触疲劳强度（25 分） ──────────────────────────
+  const s1_items = [];
+  let sh_score, sh_status;
+  if (rH <= 1.0)       { sh_score = 15; sh_status = 'ok'; }
+  else if (rH <= 1.05) { sh_score = 8;  sh_status = 'warn'; }
+  else                 { sh_score = 0;  sh_status = 'err'; }
+  s1_items.push({ name:'σH ≤ [σH]₂（接触强度满足）', standard:`σH ≤ [σH]₂ = ${sh2} MPa`,
+    actual:`σH = ${fmt(st.sH,1)} MPa，利用度 ${fmt(rH,3)}`,
+    score:sh_score, max:15, status:sh_status });
+
+  let shm_score, shm_status;
+  if (rH >= 0.90 && rH <= 1.0)      { shm_score = 10; shm_status = 'ok'; }
+  else if (rH >= 0.75 && rH < 0.90) { shm_score = 6;  shm_status = 'warn'; }
+  else if (rH < 0.75)               { shm_score = 3;  shm_status = 'warn'; }
+  else                              { shm_score = 0;  shm_status = 'err'; }
+  s1_items.push({ name:'接触强度裕度合理性', standard:'利用度 σH/[σH]₂ ∈ [0.90, 1.00] 为优（充分利用材料且不失效）',
+    actual:`利用度 = ${fmt(rH,3)}${rH < 0.90 ? '（偏保守，体积仍可减小）' : ''}`,
+    score:shm_score, max:10, status:shm_status });
+  sections.push({ title:'① 齿面接触疲劳强度', items:s1_items, max:25 });
+
+  // ── S2 齿根弯曲疲劳强度（25 分） ──────────────────────────
+  const s2_items = [];
+  let sf1_score, sf1_status;
+  if (rF1 <= 1.0)       { sf1_score = 13; sf1_status = 'ok'; }
+  else if (rF1 <= 1.05) { sf1_score = 7;  sf1_status = 'warn'; }
+  else                  { sf1_score = 0;  sf1_status = 'err'; }
+  s2_items.push({ name:'σF₁ ≤ [σF]₁（小齿轮弯曲强度）', standard:`σF₁ ≤ [σF]₁ = ${sf1} MPa`,
+    actual:`σF₁ = ${fmt(st.sF1,1)} MPa，利用度 ${fmt(rF1,3)}`,
+    score:sf1_score, max:13, status:sf1_status });
+
+  let sf2_score, sf2_status;
+  if (rF2 <= 1.0)       { sf2_score = 12; sf2_status = 'ok'; }
+  else if (rF2 <= 1.05) { sf2_score = 6;  sf2_status = 'warn'; }
+  else                  { sf2_score = 0;  sf2_status = 'err'; }
+  s2_items.push({ name:'σF₂ ≤ [σF]₂（大齿轮弯曲强度）', standard:`σF₂ ≤ [σF]₂ = ${sf2} MPa`,
+    actual:`σF₂ = ${fmt(st.sF2,1)} MPa，利用度 ${fmt(rF2,3)}`,
+    score:sf2_score, max:12, status:sf2_status });
+  sections.push({ title:'② 齿根弯曲疲劳强度', items:s2_items, max:25 });
+
+  // ── S3 体积优化效果（20 分） ──────────────────────────────
+  const s3_items = [];
+  let v_score, v_status;
+  if (vRatio <= 1.02)      { v_score = 12; v_status = 'ok'; }
+  else if (vRatio <= 1.08) { v_score = 10; v_status = 'ok'; }
+  else if (vRatio <= 1.20) { v_score = 7;  v_status = 'warn'; }
+  else if (vRatio <= 1.50) { v_score = 4;  v_status = 'warn'; }
+  else                     { v_score = 2;  v_status = 'err'; }
+  s3_items.push({ name:'体积接近理论最小值程度', standard:'V/Vmin ≤ 1.02 优 · ≤1.08 良 · ≤1.20 中（Vmin 由接触强度临界条件导出）',
+    actual:`V = ${fmt(V/1000,1)} cm³，Vmin = ${fmt(Vmin/1000,1)} cm³，V/Vmin = ${fmt(vRatio,3)}`,
+    score:v_score, max:12, status:v_status });
+
+  let vr_score, vr_status, vr_actual;
+  if (V0ref === null) {
+    vr_score = 0; vr_status = 'warn';
+    vr_actual = '未提供初值参照（仅评估模式，无优化过程）';
+  } else {
+    vr_actual = `初值 V₀ = ${fmt(V0ref/1000,1)} cm³ → 当前 V = ${fmt(V/1000,1)} cm³，减小 ${fmt(volRed*100,1)}%`;
+    if (volRed >= 0.10)      { vr_score = 8; vr_status = 'ok'; }
+    else if (volRed >= 0.05) { vr_score = 6; vr_status = 'ok'; }
+    else if (volRed >= 0.02) { vr_score = 4; vr_status = 'warn'; }
+    else if (volRed > 0)     { vr_score = 2; vr_status = 'warn'; }
+    else                     { vr_score = 0; vr_status = 'err'; }
+  }
+  s3_items.push({ name:'相对初值的体积减小率', standard:'≥10% 优 · ≥5% 良 · ≥2% 中（体现优化过程的有效性）',
+    actual:vr_actual,
+    score:vr_score, max:8, status:vr_status });
+  sections.push({ title:'③ 体积优化效果', items:s3_items, max:20 });
+
+  // ── S4 参数工程合理性（20 分） ────────────────────────────
+  const s4_items = [];
+  const mIsStd = STD_MODULES.some(sm => Math.abs(sm - m) < 0.011);
+  let m_score, m_status;
+  if (mIsStd)                                     { m_score = 8; m_status = 'ok'; }
+  else if (m >= LB[0] && m <= UB[0])              { m_score = 5; m_status = 'warn'; }
+  else                                            { m_score = 0; m_status = 'err'; }
+  s4_items.push({ name:'模数 m 符合标准系列', standard:'GB/T 1357 标准模数：2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 8, 10 …',
+    actual:`m = ${fmt(m,3)} mm ${mIsStd ? '（标准值）' : '（非标准值，需圆整）'}`,
+    score:m_score, max:8, status:m_status });
+
+  const z1Int = Math.abs(z1 - Math.round(z1)) < 0.011;
+  const z1InRange = z1 >= 17 && z1 <= 35;
+  let z_score, z_status;
+  if (z1Int && z1InRange)      { z_score = 6; z_status = 'ok'; }
+  else if (z1InRange)          { z_score = 4; z_status = 'warn'; }
+  else                         { z_score = 0; z_status = 'err'; }
+  s4_items.push({ name:'齿数 z₁ 合理性', standard:'17 ≤ z₁ ≤ 35 且取整数（z₁ ≥ 17 避免根切）',
+    actual:`z₁ = ${fmt(z1,3)} ${z1Int ? '（整数）' : '（未取整）'}`,
+    score:z_score, max:6, status:z_status });
+
+  let phi_score, phi_status;
+  if (phi >= 0.9 && phi <= 1.4)       { phi_score = 6; phi_status = 'ok'; }
+  else if (phi >= 0.8 && phi < 0.9)   { phi_score = 4; phi_status = 'warn'; }
+  else                                { phi_score = 2; phi_status = 'err'; }
+  s4_items.push({ name:'齿宽系数 φd 合理性', standard:'推荐 0.9 ~ 1.4（过大易引起偏载）',
+    actual:`φd = ${fmt(phi,3)}`,
+    score:phi_score, max:6, status:phi_status });
+  sections.push({ title:'④ 参数工程合理性', items:s4_items, max:20 });
+
+  // ── S5 约束满足度（10 分） ────────────────────────────────
+  const s5_items = [];
+  const conScore = violations === 0 ? 10 :
+                   violations <= 1  ? 6  :
+                   violations <= 3  ? 3  : 0;
+  const conStatus = violations === 0 ? 'ok' : violations <= 1 ? 'warn' : 'err';
+  s5_items.push({ name:`约束满足情况（共${totalCon}项）`, standard:'所有边界约束与强度约束均须满足',
+    actual:`满足 ${totalCon - violations} / ${totalCon} 项，违反 ${violations} 项`,
+    score:conScore, max:10, status:conStatus });
+  sections.push({ title:'⑤ 约束满足度', items:s5_items, max:10 });
+
+  // ── Total ───────────────────────────────────────────────
+  const totalScore = sections.reduce((s, sec) =>
+    s + sec.items.reduce((ss, it) => ss + it.score, 0), 0);
+  const grade = totalScore >= 90 ? '优秀' : totalScore >= 80 ? '良好' :
+                totalScore >= 70 ? '中等' : totalScore >= 60 ? '及格' : '不及格';
+  const gradeColor = totalScore >= 90 ? '#4ddc82' : totalScore >= 80 ? '#56b4ff' :
+                     totalScore >= 70 ? '#ffc645' : totalScore >= 60 ? '#ff9a3c' : '#ff6b6b';
+
+  return { sections, totalScore, grade, gradeColor,
+           x, violations, totalCon, V, Vmin, vRatio,
+           sH: st.sH, sF1: st.sF1, sF2: st.sF2, rH, rF1, rF2,
+           m, z1, phi, isOptimized };
+}
+
+function renderScoreReport(result, xLabel) {
+  const r = result;
+  _lastScoreResult = r;
+
+  const gradeSymbol = r.totalScore>=90?'🏆':r.totalScore>=80?'🥇':r.totalScore>=70?'🥈':r.totalScore>=60?'🥉':'⚠️';
+  const dimHtml = r.sections.map(sec => {
+    const dimScore = sec.items.reduce((s,it) => s+it.score, 0);
+    return `<div class="sd-item"><div class="sd-lbl">${sec.title}</div><div class="sd-val">${dimScore} / ${sec.max}</div></div>`;
+  }).join('');
+
+  document.getElementById('scoreHero').innerHTML = `
+    <div class="score-hero">
+      <div class="sh-label">单级主减速器设计评分（${xLabel}）</div>
+      <div class="sh-total">${r.totalScore}</div>
+      <div class="sh-grade" style="color:${r.gradeColor}">${gradeSymbol} ${r.grade}</div>
+      <div class="score-dims">${dimHtml}</div>
+    </div>`;
+
+  const statusClass = { ok:'badge-ok', warn:'badge-warn', err:'badge-vio' };
+  const statusText  = { ok:'✓ 优', warn:'△ 中', err:'✗ 差' };
+  let detailHtml = '';
+  r.sections.forEach(sec => {
+    const secScore = sec.items.reduce((s,it) => s+it.score, 0);
+    detailHtml += `
+      <div class="section-title" style="margin-top:18px;margin-bottom:6px">${sec.title}（${secScore} / ${sec.max} 分）</div>
+      <table class="score-table">
+        <colgroup>
+          <col style="width:22%"><col style="width:24%"><col style="width:30%">
+          <col style="width:10%"><col style="width:14%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>评分项目</th><th>标准要求</th><th>实际情况</th>
+            <th style="text-align:center">状态</th><th style="text-align:center">得分/满分</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sec.items.map(it => `
+          <tr>
+            <td><strong>${it.name}</strong></td>
+            <td style="font-size:12px;color:var(--hint-color);line-height:1.5">${it.standard}</td>
+            <td style="line-height:1.5">${it.actual}</td>
+            <td style="text-align:center;white-space:nowrap"><span class="${statusClass[it.status]}">${statusText[it.status]}</span></td>
+            <td style="text-align:center;white-space:nowrap"><span class="${it.score===it.max?'badge-ok':it.score>0?'badge-warn':'badge-vio'}">${it.score}/${it.max}</span></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  });
+  document.getElementById('scoreDetails').innerHTML = detailHtml;
+
+  // Advice
+  const advices = [];
+  if (r.rH > 1.0)    advices.push(`📌 <strong>接触强度不足：</strong>σH = ${fmt(r.sH,1)} MPa 超过 [σH]₂ = ${P.sh2()} MPa，需增大 m、z₁ 或 φd。`);
+  if (r.rH < 0.90 && r.rH <= 1.0) advices.push(`📌 <strong>接触强度裕度过大：</strong>利用度仅 ${fmt(r.rH,3)}，材料未充分利用，可在满足强度前提下进一步减小体积。`);
+  if (r.rF1 > 1.0)   advices.push(`📌 <strong>小齿轮弯曲强度不足：</strong>σF₁ = ${fmt(r.sF1,1)} MPa 超过 [σF]₁ = ${P.sf1()} MPa，优先增大模数 m。`);
+  if (r.rF2 > 1.0)   advices.push(`📌 <strong>大齿轮弯曲强度不足：</strong>σF₂ = ${fmt(r.sF2,1)} MPa 超过 [σF]₂ = ${P.sf2()} MPa，优先增大模数 m。`);
+  if (r.vRatio > 1.08) advices.push(`📌 <strong>体积距理论最小值偏远：</strong>V/Vmin = ${fmt(r.vRatio,3)}，建议重新运行优化（推荐 DE+SQP）使解贴近接触强度临界面。`);
+  if (r.V0ref !== null && r.volRed < 0.02) advices.push(`📌 <strong>优化幅度不足：</strong>相对初值体积仅减小 ${fmt(r.volRed*100,1)}%，可尝试更换较差初值（如 m=5, z₁=18, φd=1.2）重新优化，对比分析优化效果。`);
+  const mIsStd = STD_MODULES.some(sm => Math.abs(sm - r.m) < 0.011);
+  if (!mIsStd) advices.push(`📌 <strong>模数未圆整：</strong>m = ${fmt(r.m,3)} mm 不是标准模数，请点击「自动标准圆整」并确认圆整后约束仍满足。`);
+  if (Math.abs(r.z1 - Math.round(r.z1)) >= 0.011) advices.push(`📌 <strong>齿数未取整：</strong>z₁ = ${fmt(r.z1,3)}，工程上必须取整数，取整后请复核强度约束。`);
+  if (r.phi < 0.9) advices.push(`📌 <strong>齿宽系数偏小：</strong>φd = ${fmt(r.phi,3)} < 0.9，齿宽过窄会增大单位齿宽载荷，建议取 0.9 ~ 1.4。`);
+  if (r.violations > 0) advices.push(`📌 <strong>有 ${r.violations} 项约束未满足：</strong>请检查约束校核表，调整设计变量使所有约束满足后再提交。`);
+  if (advices.length === 0) advices.push('✅ 设计参数整体合理，各项指标均达到良好水准！建议继续完善实验报告中的建模过程与结果分析。');
+  document.getElementById('scoreAdvice').innerHTML =
+    advices.map(a => `<p style="margin:0 0 8px 0">${a}</p>`).join('');
+
+  document.getElementById('scoreReportPanel').style.display = 'block';
+  document.getElementById('scoreReportPanel').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+// ── 桥接函数 ─────────────────────────────────────────────
+function updateScoreReport(x0, xOpt) {
+  _lastX0   = x0;
+  _lastXOpt = xOpt;
+  const xForScore = xOpt || x0;
+  const isOptimized = xOpt !== null;
+  const scoreLabel = isOptimized ? '优化后参数（连续解，请圆整后重新评分再提交）' : '初始参数（未优化）';
+  const scoreResult = computeAxleScore(xForScore, isOptimized, isOptimized ? x0 : null);
+  renderScoreReport(scoreResult, scoreLabel);
+}
+
+function reCalcScore() {
+  const xRnd = VAR_IDS.map(id => {
+    const el = document.getElementById('rnd_'+id);
+    return el ? +el.value : +document.getElementById('x_'+id).value;
+  });
+  const result = computeAxleScore(xRnd, false, _lastX0);
+  renderScoreReport(result, '圆整后参数（建议以此提交）');
+}
+
+// ── 生成报告文件 ─────────────────────────────────────────
+function generateAxleReport() {
+  if (!_lastScoreResult) { alert('请先完成计算并查看评分报告！'); return; }
+  const r = _lastScoreResult;
+  if (!axleState.studentId) { alert('请先登录（输入学号和姓名）！'); return; }
+
+  let rpt = '═══════════════════════════════════════════════════\n';
+  rpt += '   汽车单级主减速器优化设计  —  智能评分报告\n';
+  rpt += '═══════════════════════════════════════════════════\n\n';
+  rpt += '【学生信息】\n';
+  rpt += `学号：${axleState.studentId}\n姓名：${axleState.studentName}\n提交时间：${new Date().toLocaleString('zh-CN')}\n\n`;
+  rpt += '【设计参数】\n';
+  rpt += `模数 m = ${r.m} mm，齿数 z₁ = ${r.z1}，齿宽系数 φd = ${r.phi}\n`;
+  rpt += `体积 V = ${(r.V/1000).toFixed(2)} cm³（理论下限 Vmin = ${(r.Vmin/1000).toFixed(2)} cm³）\n`;
+  rpt += `σH = ${r.sH.toFixed(1)} MPa，σF₁ = ${r.sF1.toFixed(1)} MPa，σF₂ = ${r.sF2.toFixed(1)} MPa\n\n`;
+  rpt += '【总评分】\n';
+  rpt += `总分：${r.totalScore} / 100  （${r.grade}）\n`;
+  r.sections.forEach(sec => {
+    const sc = sec.items.reduce((s,it) => s+it.score, 0);
+    rpt += `  ${sec.title}：${sc} / ${sec.max}\n`;
+  });
+  rpt += '\n【各维度详细评分】\n';
+  r.sections.forEach(sec => {
+    rpt += `\n─── ${sec.title} ───\n`;
+    sec.items.forEach(it => {
+      const st = it.status==='ok'?'✓ 合格':it.status==='warn'?'△ 偏差':'✗ 不足';
+      rpt += `  ${it.name}\n    标准：${it.standard}\n    实际：${it.actual}\n    ${st}  得分：${it.score}/${it.max}\n`;
+    });
+  });
+  rpt += '\n═══════════════════════════════════════════════════\n';
+  rpt += `学号：${axleState.studentId}  姓名：${axleState.studentName}\n`;
+  rpt += '═══════════════════════════════════════════════════\n\n\n';
+  rpt += '--- 以下为系统数据，请勿修改 ---\n--- SYSTEM DATA BEGIN ---\n';
+  const scores_dim = {};
+  r.sections.forEach((sec, i) => {
+    scores_dim['s'+(i+1)] = sec.items.reduce((s,it) => s+it.score, 0);
+  });
+  const jsonData = {
+    studentId: axleState.studentId,
+    studentName: axleState.studentName,
+    timestamp: new Date().toISOString(),
+    reportType: 'axle_single_optimizer',
+    totalScore: r.totalScore,
+    grade: r.grade,
+    isOptimized: r.isOptimized,
+    scores: scores_dim,
+    key_params: {
+      m: r.m, z1: r.z1, faid: r.phi,
+      V_cm3: r.V/1000, Vmin_cm3: r.Vmin/1000, vRatio: r.vRatio,
+      sigmaH: r.sH, sigmaF1: r.sF1, sigmaF2: r.sF2,
+      violations: r.violations
+    },
+    sections: r.sections
+  };
+  rpt += JSON.stringify(jsonData, null, 2);
+  rpt += '\n--- SYSTEM DATA END ---\n';
+
+  const blob = new Blob([rpt], { type:'text/plain;charset=utf-8' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = `主减速器评分报告_${axleState.studentId}_${axleState.studentName}_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+  alert(`评分报告已生成！\n总分：${r.totalScore} 分（${r.grade}）\n请将 TXT 文件提交给教师。`);
+}
+
+</script>
+
+<!-- ══════════════════════════════════════════════════════
+     源代码保护层 v2.0
+     ══════════════════════════════════════════════════════ -->
+<script>
+(function(){
+  'use strict';
+
+  // ── 1. 禁止右键菜单 ──
+  document.addEventListener('contextmenu', function(e){ e.preventDefault(); return false; }, true);
+
+  // ── 2. 禁止键盘快捷键（F12 / Ctrl+Shift+I,J,C / Ctrl+U / Ctrl+S / Ctrl+P） ──
+  document.addEventListener('keydown', function(e){
+    // F12
+    if(e.key==='F12'||e.keyCode===123){ e.preventDefault();e.stopPropagation();return false; }
+    // Ctrl+Shift+I / J / C — DevTools
+    if(e.ctrlKey&&e.shiftKey&&(/^[IJCijc]$/.test(e.key)||[73,74,67].indexOf(e.keyCode)!==-1)){
+      e.preventDefault();e.stopPropagation();return false;
+    }
+    // Ctrl+U — 查看源代码
+    if(e.ctrlKey&&(e.key==='U'||e.key==='u'||e.keyCode===85)){
+      e.preventDefault();e.stopPropagation();return false;
+    }
+    // Ctrl+S — 保存
+    if(e.ctrlKey&&(e.key==='S'||e.key==='s'||e.keyCode===83)){
+      e.preventDefault();e.stopPropagation();return false;
+    }
+    // Ctrl+P — 打印
+    if(e.ctrlKey&&(e.key==='P'||e.key==='p'||e.keyCode===80)){
+      e.preventDefault();e.stopPropagation();return false;
+    }
+    // Ctrl+A — 全选（输入框外禁止）
+    if(e.ctrlKey&&(e.key==='A'||e.key==='a'||e.keyCode===65)){
+      if(e.target.tagName!=='INPUT'&&e.target.tagName!=='TEXTAREA'){
+        e.preventDefault();e.stopPropagation();return false;
+      }
+    }
+    // Ctrl+C / Ctrl+X — 复制/剪切（输入框外禁止）
+    if(e.ctrlKey&&/^[CXcx]$/.test(e.key)){
+      if(e.target.tagName!=='INPUT'&&e.target.tagName!=='TEXTAREA'){
+        e.preventDefault();e.stopPropagation();return false;
+      }
+    }
+  }, true);
+
+  // ── 3. 禁止拖拽 ──
+  document.addEventListener('dragstart', function(e){ e.preventDefault();return false; }, true);
+  document.addEventListener('drop', function(e){ e.preventDefault();return false; }, true);
+
+  // ── 4. 禁止复制/剪切（输入框外） ──
+  ['copy','cut'].forEach(function(evt){
+    document.addEventListener(evt, function(e){
+      if(e.target.tagName!=='INPUT'&&e.target.tagName!=='TEXTAREA'){
+        e.preventDefault();return false;
+      }
+    }, true);
+  });
+
+  // ── 5. debugger 陷阱 — DevTools 打开时反复暂停 ──
+  (function _trap(){
+    try{ (function(){}).constructor('debugger')(); }catch(e){}
+    setTimeout(_trap, 2000);
+  })();
+
+  // ── 6. DevTools 窗口尺寸检测 ──
+  var _bw=window.outerWidth-window.innerWidth;
+  var _bh=window.outerHeight-window.innerHeight;
+  var _maskOn=false;
+  setInterval(function(){
+    var dw=window.outerWidth-window.innerWidth;
+    var dh=window.outerHeight-window.innerHeight;
+    if((dw>_bw+160||dh>_bh+160)&&!_maskOn){
+      _maskOn=true;
+      var m=document.createElement('div');
+      m.id='_srcProtectMask';
+      m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.96);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#ff6b6b;font-family:"Courier New",monospace;font-size:22px;text-align:center;padding:40px';
+      m.innerHTML='<div style="font-size:64px;margin-bottom:20px">🚫</div><div>检测到开发者工具已打开</div><div style="font-size:14px;color:#666;margin-top:12px">请关闭开发者工具后刷新页面继续使用</div>';
+      document.body.appendChild(m);
+    }
+    if(dw<=_bw+160&&dh<=_bh+160&&_maskOn){
+      _maskOn=false;
+      var m=document.getElementById('_srcProtectMask');
+      if(m)m.remove();
+    }
+  },800);
+
+  // ── 7. 禁止打印 ──
+  var ps=document.createElement('style');
+  ps.setAttribute('media','print');
+  ps.textContent='body *{display:none!important}body::after{content:"⚠️ 本页面受保护，禁止打印";display:block!important;font-size:28px;text-align:center;padding:120px 40px;color:#333;font-family:sans-serif}';
+  document.head.appendChild(ps);
+
+  // ── 8. 控制台警告 + 定时清空 ──
+  console.log('%c⚠️ 警告','color:#ff6b6b;font-size:36px;font-weight:bold');
+  console.log('%c本页面受到代码保护，请勿尝试查看或复制源代码。','color:#ffc645;font-size:14px');
+  setInterval(function(){ try{console.clear();}catch(e){} },3000);
+
+})();
+</script>
+</body>
+</html>
